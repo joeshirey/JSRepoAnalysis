@@ -10,7 +10,7 @@ def get_github_owner_repo(file_path):
     try:
         remote_url = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], cwd=os.path.dirname(file_path)).decode("utf-8").strip()
         # Use regex to extract owner and repo
-        match = re.search(r"github\.com[:/](.*?)/(.*?)\.git", remote_url)
+        match = re.search(r"github\.com(?:[:/]|@)(.*?)/(.*?)(?:\.git)?$", remote_url)
         if match:
             owner = match.group(1)
             repo = match.group(2)
@@ -52,7 +52,7 @@ def get_commit_history(file_path):
     Gets the commit history for a file and formats it as JSON.
     """
     try:
-        git_log = subprocess.check_output(["git", "log", "--follow", "--pretty=format:%H%n%an%n%ae%n%ad%n%s", file_path], cwd=os.path.dirname(file_path)).decode("utf-8")
+        git_log = subprocess.check_output(["git", "log", "--follow", "--pretty=format:%H%n%an%n%ae%n%ad%n%s", "--", file_path], cwd=os.path.dirname(file_path)).decode("utf-8")
         commits = []
         for commit in git_log.split("commit "):
             if commit:
@@ -120,6 +120,6 @@ def get_git_data(file_path):
 if __name__ == '__main__':
     # Example usage:
     # Assuming this script is in the 'tools' directory.
-    file_path = "tools/git_file_processor.py"  # Replace with the actual path to your file
+    file_path = "tools/git_file_processor.py"
     git_info = get_git_data(file_path)
     print(json.dumps(git_info, indent=4))
