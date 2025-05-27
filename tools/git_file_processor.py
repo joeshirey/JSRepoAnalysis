@@ -52,26 +52,30 @@ def get_commit_history(file_path):
     Gets the commit history for a file and formats it as JSON.
     """
     try:
-        git_log = subprocess.check_output(["git", "log", "--follow", "--pretty=format:%H%n%an%n%ae%n%ad%n%s", "--", file_path], cwd=os.path.dirname(file_path)).decode("utf-8")
+        git_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=os.path.dirname(file_path)).decode("utf-8").strip()
+        git_log = subprocess.check_output(["git", "log", "--follow", "--pretty=format:%H%n%an%n%ae%n%ad%n%s%n", "--", file_path], cwd=git_root).decode("utf-8")
+        print(f"Git log output: {git_log}")  # Debugging line
         commits = []
-        for commit in git_log.split("commit "):
-            if commit:
-                lines = commit.splitlines()
-                if len(lines) >= 5:
-                    commit_hash = lines[0]
-                    author_name = lines[1]
-                    author_email = lines[2]
-                    date = lines[3]
-                    message = lines[4]
-                    commits.append({
-                        "hash": commit_hash,
-                        "author_name": author_name,
-                        "author_email": author_email,
-                        "date": date,
-                        "message": message
-                    })
+        log_lines = git_log.strip().split('\n')
+        i = 0
+        while i + 4 < len(log_lines):
+            commit_hash = log_lines[i].strip()
+            author_name = log_lines[i+1].strip()
+            author_email = log_lines[i+2].strip()
+            date = log_lines[i+3].strip()
+            message = log_lines[i+4].strip()
+
+            commits.append({
+                "hash": commit_hash,
+                "author_name": author_name,
+                "author_email": author_email,
+                "date": date,
+                "message": message
+            })
+            i += 5
         return commits
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        print(f"Error getting commit history: {e}")
         return None
 
 def get_git_data(file_path):
