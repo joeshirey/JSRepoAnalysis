@@ -121,9 +121,22 @@ def get_git_data(file_path):
     except Exception as e:
         return {"error": str(e)}
 
-if __name__ == '__main__':
-    # Example usage:
-    # Assuming this script is in the 'tools' directory.
-    file_path = "tools/git_file_processor.py"
-    git_info = get_git_data(file_path)
-    print(json.dumps(git_info, indent=4))
+def get_file_content(file_path):
+    """
+    Gets the content of a file from a given link.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        return content
+    except FileNotFoundError:
+        return json.dumps({"error": f"File not found at path: {file_path}"})
+    except Exception as e:
+        return json.dumps({"error": f"Error reading file: {e}"})
+
+# if __name__ == '__main__':
+#     # Example usage:
+#     # Assuming this script is in the 'tools' directory.
+#     file_path = "tools/git_file_processor.py"
+#     git_info = get_git_data(file_path)
+#     print(json.dumps(git_info, indent=4))
