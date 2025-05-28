@@ -1,0 +1,61 @@
+import os
+import json
+import argparse
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part
+import code
+
+def evaluate_code(file_path):
+    """
+    Evaluates JavaScript code using the Gemini 2.5 Flash model on Vertex AI.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            code = file.read()
+    except FileNotFoundError:
+        return json.dumps({"error": f"File not found at path: {file_path}"})
+    except Exception as e:
+        return json.dumps({"error": f"Error reading file: {e}"})
+
+    # Read prompt from file
+    try:
+        with open("prompts/js_eval.txt", "r") as f:
+            prompt_template = f.read()
+    except FileNotFoundError:
+        return json.dumps({"error": "Prompt file not found."})
+    except Exception as e:
+        return json.dumps({"error": f"Error reading prompt file: {e}"})
+
+    # Inject code into prompt
+    prompt = prompt_template.format(code=code)
+
+    # Vertex AI configuration
+    PROJECT_ID = os.environ.get("PROJECT_ID")  # Replace with your project ID
+    LOCATION = "us-central1"  # Replace with your location
+    MODEL_NAME = "gemini-2.5-flash-preview-05-20"
+
+    # Initialize Vertex AI client
+    vertexai.init(project=PROJECT_ID, location=LOCATION)
+    model = GenerativeModel(MODEL_NAME)
+    response = model.generate_content(prompt)
+
+    if response.candidates and response.candidates[0].content.parts:
+        return response.candidates[0].content.parts[0].text
+    else:
+        return "No content generated or unexpected response structure."
+
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Evaluate JavaScript code file using Gemini 2.5 Flash on Vertex AI.")
+    parser.add_argument("file_path", help="Path to the JavaScript code file.")
+
+    args = parser.parse_args()
+    file_path = args.file_path
+
+    evaluation_result = evaluate_code(file_path)
+    print(evaluation_result)
+
+
+if __name__ == "__main__":
+    main()
