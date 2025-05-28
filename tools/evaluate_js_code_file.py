@@ -39,8 +39,22 @@ def evaluate_code(file_path):
     model = GenerativeModel(MODEL_NAME)
     response = model.generate_content(prompt)
 
+    prefix = "```json\n"
+    suffix = "\n```" # Assuming there's a newline before the closing backticks
+
     if response.candidates and response.candidates[0].content.parts:
-        return response.candidates[0].content.parts[0].text
+        temp_string = response.candidates[0].content.parts[0].text
+        if temp_string.startswith("```json\n"):
+            temp_string = temp_string.removeprefix("```json\n")
+        elif temp_string.startswith("```json"): # In case there's no newline after ```json
+            temp_string = temp_string.removeprefix("```json")
+
+        if temp_string.endswith("\n```"):
+            temp_string = temp_string.removesuffix("\n```")
+        elif temp_string.endswith("```"):
+            temp_string = temp_string.removesuffix("```")
+        clean_json_string = temp_string.strip() 
+        return clean_json_string
     else:
         return "No content generated or unexpected response structure."
 
@@ -54,7 +68,7 @@ def main():
     file_path = args.file_path
 
     evaluation_result = evaluate_code(file_path)
-    print(evaluation_result)
+    print(json.loads(evaluation_result))
 
 
 if __name__ == "__main__":

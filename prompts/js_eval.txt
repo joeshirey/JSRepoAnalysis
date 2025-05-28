@@ -7,6 +7,7 @@ For each item where the answer is NO provide your response to the question where
 Provide an overall score as a percentage, between 0.0 and 1.0, rounded to two decimal places of the number of YES answers compared to the total number of questions.
 Respond as JSON with just overall score as overall_score and a list of evaluations with a criteria and reasoning.
 
+Return ONLY valid JSON and no other characters (including escape or newline characters)
 
 # Evaluation
 ## Metric Definition
