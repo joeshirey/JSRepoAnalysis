@@ -7,7 +7,7 @@ import sys
 
 def extract_region_tags(file_path):
     """
-    Extracts unique region tags from a JavaScript or TypeScript file.
+    Extracts unique region tags from a JavaScript, TypeScript, or Python file.
     """
     region_tags = set()
     try:
@@ -17,7 +17,7 @@ def extract_region_tags(file_path):
             file = open(file_path, 'r', encoding='utf-8')
         with file:
             for line in file:
-                for match in re.finditer(r'\/\/\s*\[(START|END)\s+(.+?)\]', line):
+                for match in re.finditer(r'(?:#|\/\/)\s*\[(START|END)\s+(.+?)\]', line):
                     region_tag = match.group(2).strip()
                     region_tags.add(region_tag)
     except FileNotFoundError:
@@ -31,8 +31,8 @@ def extract_region_tags(file_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract region tags from a JavaScript/TypeScript file.")
-    parser.add_argument("file_path", help="Path to the JavaScript/TypeScript file.")
+    parser = argparse.ArgumentParser(description="Extract region tags from a JavaScript, TypeScript, or Python file.")
+    parser.add_argument("file_path", help="Path to the JavaScript, TypeScript, or Python file.")
 
     args = parser.parse_args()
 

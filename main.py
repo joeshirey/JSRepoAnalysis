@@ -2,10 +2,11 @@ import argparse
 import json
 import subprocess
 from tools.git_file_processor import get_git_data
-from tools.evaluate_js_code_file import evaluate_code
-from tools.js_analysis import extract_region_tags
+from tools.evaluate_js_code_file import evaluate_code as evaluate_js_code
+from tools.evaluate_py_code_file import evaluate_code as evaluate_py_code
+from tools.extract_region_tags import extract_region_tags
 
-def process_js_file(file_link):
+def process_file(file_link):
     #try:
     # Call git_file_processor.py
     
@@ -15,13 +16,23 @@ def process_js_file(file_link):
     js_info = extract_region_tags(file_link)
     #print(js_info)
 
-    style_info = evaluate_code(file_link)
-    #print(style_info)
-
+    style_info = None
+    if file_link.endswith(('.js', '.ts')):
+        style_info = evaluate_js_code(file_link)
+    elif file_link.endswith('.py'):
+        style_info = evaluate_py_code(file_link)
+    else:
+        return {"error": f"Unsupported file type for evaluation: {file_link}"}
+    if style_info.startswith("```json"):
+        cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
+    else:
+        # Fallback for cases where it might just be wrapped in ```
+        cleaned_text = style_info.strip().strip("`").strip()
+  
     result = {
         "git_info": git_info,
         "region_tags": js_info,
-        "evaluation_data": json.loads(style_info)
+        "evaluation_data": json.loads(cleaned_text)
     }
 
     return result
@@ -32,13 +43,16 @@ def process_js_file(file_link):
     #    return {"error": f"Error processing file: {e}"}
 
 def main():
-    parser = argparse.ArgumentParser(description="Process a JavaScript file from a link.")
-    parser.add_argument("file_link", help="Link to the JavaScript file.")
+    parser = argparse.ArgumentParser(description="Process a code file from a link.")
+    parser.add_argument("file_link", help="Link to the code file.")
     args = parser.parse_args()
     print(f"Processing file: {args.file_link}")
-    result = process_js_file(args.file_link)
+    result = process_file(args.file_link)
     print(json.dumps(result, indent=4))
-    print(result["evaluation_data"]["overall_score"])
+    if "evaluation_data" in result and "overall_score" in result["evaluation_data"]:
+        print(result["evaluation_data"]["overall_score"])
+    elif "error" in result:
+        print(f"Error processing file: {result['error']}")
 
 if __name__ == "__main__":
     main()

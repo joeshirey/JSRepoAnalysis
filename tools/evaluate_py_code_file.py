@@ -19,7 +19,7 @@ def evaluate_code(file_path):
 
     # Read prompt from file
     try:
-        with open("../prompts/py_eval.txt", "r") as f:
+        with open("./prompts/py_eval.txt", "r") as f:
             prompt_template = f.read()
     except FileNotFoundError:
         return json.dumps({"error": "Prompt file not found."})

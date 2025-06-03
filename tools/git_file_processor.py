@@ -31,7 +31,8 @@ def get_github_link(file_path):
         branch_name = get_branch_name(file_path)
         if not branch_name:
             return None
-        relative_file_path = file_path.replace(os.getcwd() + "/", "")
+        git_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=os.path.dirname(file_path)).decode("utf-8").strip()
+        relative_file_path = os.path.relpath(file_path, git_root)
         github_link = f"https://github.com/{owner}/{repo}/blob/{branch_name}/{relative_file_path}"
         return github_link
     except subprocess.CalledProcessError:
@@ -54,7 +55,7 @@ def get_commit_history(file_path):
     try:
         git_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=os.path.dirname(file_path)).decode("utf-8").strip()
         git_log = subprocess.check_output(["git", "log", "--follow", "--pretty=format:%H%n%an%n%ae%n%ad%n%s%n", "--", file_path], cwd=git_root).decode("utf-8")
-        print(f"Git log output: {git_log}")  # Debugging line
+        #print(f"Git log output: {git_log}")  # Debugging line
         commits = []
         log_lines = git_log.strip().split('\n')
         i = 0
@@ -113,6 +114,7 @@ def get_git_data(file_path):
             "branch_name": branch_name,
             "commit_history": commit_history,
             "metadata": file_metadata,
+            "last_updated": file_metadata["modified"]
         }
 
         return git_data
@@ -134,9 +136,9 @@ def get_file_content(file_path):
     except Exception as e:
         return json.dumps({"error": f"Error reading file: {e}"})
 
-# if __name__ == '__main__':
-#     # Example usage:
-#     # Assuming this script is in the 'tools' directory.
-#     file_path = "tools/git_file_processor.py"
-#     git_info = get_git_data(file_path)
-#     print(json.dumps(git_info, indent=4))
+if __name__ == '__main__':
+    # Example usage:
+    # Assuming this script is in the 'tools' directory.
+    file_path = "tools/git_file_processor.py"
+    git_info = get_git_data(file_path)
+    #print(json.dumps(git_info, indent=4))
