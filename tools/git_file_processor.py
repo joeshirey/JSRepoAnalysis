@@ -2,6 +2,7 @@ import os
 import subprocess
 import json
 import re
+from datetime import datetime
 
 def get_github_owner_repo(file_path):
     """
@@ -112,9 +113,9 @@ def get_git_data(file_path):
             "github_repo": repo,
             "github_link": github_link,
             "branch_name": branch_name,
+            "last_updated": datetime.strptime(commit_history[0]["date"], '%a %b %d %H:%M:%S %Y %z').strftime('%Y-%m-%d') if commit_history else None,
             "commit_history": commit_history,
             "metadata": file_metadata,
-            "last_updated": file_metadata["modified"]
         }
 
         return git_data

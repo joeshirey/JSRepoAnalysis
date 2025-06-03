@@ -1,6 +1,7 @@
 import argparse
 import json
 import subprocess
+import os
 from tools.git_file_processor import get_git_data
 from tools.evaluate_js_code_file import evaluate_code as evaluate_js_code
 from tools.evaluate_py_code_file import evaluate_code as evaluate_py_code
@@ -16,18 +17,21 @@ def process_file(file_link):
     js_info = extract_region_tags(file_link)
     #print(js_info)
 
-    style_info = None
-    if file_link.endswith(('.js', '.ts')):
-        style_info = evaluate_js_code(file_link)
-    elif file_link.endswith('.py'):
-        style_info = evaluate_py_code(file_link)
+    if not js_info:
+        cleaned_text = '["File not analyzed, no region tags"]'
     else:
-        return {"error": f"Unsupported file type for evaluation: {file_link}"}
-    if style_info.startswith("```json"):
-        cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
-    else:
-        # Fallback for cases where it might just be wrapped in ```
-        cleaned_text = style_info.strip().strip("`").strip()
+        style_info = None
+        if file_link.endswith(('.js', '.ts')):
+            style_info = evaluate_js_code(file_link)
+        elif file_link.endswith('.py'):
+            style_info = evaluate_py_code(file_link)
+        else:
+            return {"error": f"Unsupported file type for evaluation: {file_link}"}
+        if style_info.startswith("```json"):
+            cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
+        else:
+            # Fallback for cases where it might just be wrapped in ```
+            cleaned_text = style_info.strip().strip("`").strip()
   
     result = {
         "git_info": git_info,
@@ -42,17 +46,31 @@ def process_file(file_link):
     #except Exception as e:
     #    return {"error": f"Error processing file: {e}"}
 
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Process a code file from a link.")
-    parser.add_argument("file_link", help="Link to the code file.")
+    parser = argparse.ArgumentParser(description="Process a code file or directory.")
+    parser.add_argument("file_link", help="Path to the code file or directory.")
     args = parser.parse_args()
-    print(f"Processing file: {args.file_link}")
-    result = process_file(args.file_link)
-    print(json.dumps(result, indent=4))
-    if "evaluation_data" in result and "overall_score" in result["evaluation_data"]:
-        print(result["evaluation_data"]["overall_score"])
-    elif "error" in result:
-        print(f"Error processing file: {result['error']}")
+
+    input_path = args.file_link
+
+    if os.path.isfile(input_path):
+        print(f"Processing file: {input_path}")
+        result = process_file(input_path)
+        print(json.dumps(result, indent=4))
+    elif os.path.isdir(input_path):
+        print(f"Processing directory: {input_path}")
+        for root, dirs, files in os.walk(input_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                if file_path.endswith(('.js', '.ts', '.py')):
+                    print(f"Processing file: {file_path}")
+                    result = process_file(file_path)
+                    print(json.dumps(result, indent=4))
+    else:
+        print(f"Error: Invalid path provided: {input_path}")
+
 
 if __name__ == "__main__":
     main()
