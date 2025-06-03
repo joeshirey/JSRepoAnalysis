@@ -7,7 +7,7 @@ import code
 
 def evaluate_code(file_path):
     """
-    Evaluates JavaScript code using the Gemini 2.5 Flash model on Vertex AI.
+    Evaluates Python code using the Gemini 2.5 Flash model on Vertex AI.
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -19,7 +19,7 @@ def evaluate_code(file_path):
 
     # Read prompt from file
     try:
-        with open("../prompts/js_eval.txt", "r") as f:
+        with open("../prompts/py_eval.txt", "r") as f:
             prompt_template = f.read()
     except FileNotFoundError:
         return json.dumps({"error": "Prompt file not found."})
@@ -63,8 +63,8 @@ def evaluate_code(file_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate JavaScript code file using Gemini 2.5 Flash on Vertex AI.")
-    parser.add_argument("file_path", help="Path to the JavaScript code file.")
+    parser = argparse.ArgumentParser(description="Evaluate Python code file using Gemini 2.5 Flash on Vertex AI.")
+    parser.add_argument("file_path", help="Path to the Python code file.")
 
     args = parser.parse_args()
     file_path = args.file_path
