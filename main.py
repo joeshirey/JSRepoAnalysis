@@ -18,27 +18,36 @@ def process_file(file_link):
     js_info = extract_region_tags(file_link)
     #print(js_info)
 
-    if not js_info:
-        cleaned_text = '["File not analyzed, no region tags"]'
-    else:
-        style_info = None
-        if file_link.endswith(('.js', '.ts')):
-            style_info = evaluate_js_code(file_link)
-        elif file_link.endswith('.py'):
-            style_info = evaluate_py_code(file_link)
+    try:
+        if not js_info:
+            cleaned_text = '["File not analyzed, no region tags"]'
         else:
-            return {"error": f"Unsupported file type for evaluation: {file_link}"}
-        if style_info.startswith("```json"):
-            cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
-        else:
-            # Fallback for cases where it might just be wrapped in ```
-            cleaned_text = style_info.strip().strip("`").strip()
-  
-    result = {
-        "git_info": git_info,
-        "region_tags": js_info,
-        "evaluation_data": json.loads(cleaned_text)
-    }
+            style_info = None
+            if file_link.endswith(('.js', '.ts')):
+                style_info = evaluate_js_code(file_link)
+            elif file_link.endswith('.py'):
+                style_info = evaluate_py_code(file_link)
+            else:
+                return {"error": f"Unsupported file type for evaluation: {file_link}"}
+            if style_info.startswith("```json"):
+                cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
+            else:
+                # Fallback for cases where it might just be wrapped in ```
+                cleaned_text = style_info.strip().strip("`").strip()
+    
+        result = {
+            "git_info": git_info,
+            "region_tags": js_info,
+            "evaluation_data": json.loads(cleaned_text)
+        }
+
+    except Exception as e:
+        error_message = f"Error processing file: {e}"
+        absolute_path = os.path.abspath(file_link)
+        with open("errors.log", "a") as error_file:
+            error_file.write(f"{absolute_path}\t{error_message}\n")
+        return {"error": error_message}
+
 
     # Determine language for collection name
     language = None
@@ -77,7 +86,7 @@ def main():
     if os.path.isfile(input_path):
         print(f"Processing file: {input_path}")
         result = process_file(input_path)
-        print(json.dumps(result, indent=4))
+        #print(json.dumps(result, indent=4))
     elif os.path.isdir(input_path):
         print(f"Processing directory: {input_path}")
         for root, dirs, files in os.walk(input_path):
@@ -86,7 +95,7 @@ def main():
                 if file_path.endswith(('.js', '.ts', '.py')):
                     print(f"Processing file: {file_path}")
                     result = process_file(file_path)
-                    print(json.dumps(result, indent=4))
+                    #print(json.dumps(result, indent=4))
     else:
         print(f"Error: Invalid path provided: {input_path}")
 
