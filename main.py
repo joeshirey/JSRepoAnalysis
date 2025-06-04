@@ -2,9 +2,11 @@ import argparse
 import json
 import subprocess
 import os
+from datetime import datetime
 from tools.git_file_processor import get_git_data
-from tools.evaluate_js_code_file import evaluate_code as evaluate_js_code
-from tools.evaluate_py_code_file import evaluate_code as evaluate_py_code
+#from tools.evaluate_js_code_file import evaluate_code as evaluate_js_code
+#from tools.evaluate_py_code_file import evaluate_code as evaluate_py_code
+from tools.evaluate_code_file import evaluate_code
 from tools.extract_region_tags import extract_region_tags
 from tools.firestore import create
 
@@ -24,9 +26,9 @@ def process_file(file_link):
         else:
             style_info = None
             if file_link.endswith(('.js', '.ts')):
-                style_info = evaluate_js_code(file_link)
+                style_info = evaluate_code(file_link, "TypeScript")
             elif file_link.endswith('.py'):
-                style_info = evaluate_py_code(file_link)
+                style_info = evaluate_code(file_link, "Python")
             else:
                 return {"error": f"Unsupported file type for evaluation: {file_link}"}
             if style_info.startswith("```json"):
@@ -38,7 +40,8 @@ def process_file(file_link):
         result = {
             "git_info": git_info,
             "region_tags": js_info,
-            "evaluation_data": json.loads(cleaned_text)
+            "evaluation_data": json.loads(cleaned_text),
+            "evaluation_date": datetime.now().strftime("%Y-%m-%d %H:%M")
         }
 
     except Exception as e:

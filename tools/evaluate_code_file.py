@@ -28,9 +28,9 @@ def fill_prompt_placeholders(prompt_template_string: str, language: str, code_sa
 
     return filled_prompt
 
-def evaluate_code(file_path):
+def evaluate_code(file_path, language):
     """
-    Evaluates Python code using the Gemini 2.5 Flash model on Vertex AI.
+    Evaluates code using the Gemini 2.5 Flash model on Vertex AI.
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -42,7 +42,7 @@ def evaluate_code(file_path):
 
     # Read prompt from file
     try:
-        with open("../prompts/consolidated_eval.txt", "r") as f:
+        with open("./prompts/consolidated_eval.txt", "r") as f:
             prompt_template = f.read()
     except FileNotFoundError:
         return json.dumps({"error": "Prompt file not found."})
@@ -50,7 +50,7 @@ def evaluate_code(file_path):
         return json.dumps({"error": f"Error reading prompt file: {e}"})
 
     # Inject code into prompt
-    prompt = fill_prompt_placeholders(prompt_template_string=prompt_template, language="Python", code_sample=code)
+    prompt = fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code)
     #print(prompt)
 
     # Vertex AI configuration
@@ -103,14 +103,25 @@ def evaluate_code(file_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate Python code file using Gemini 2.5 Flash on Vertex AI.")
-    parser.add_argument("file_path", help="Path to the Python code file.")
+    parser = argparse.ArgumentParser(description="Evaluate  code file using Gemini 2.5 Flash on Vertex AI.")
+    parser.add_argument("file_path", help="Path to the code file.")
 
     args = parser.parse_args()
     file_path = args.file_path
-
-    evaluation_result = evaluate_code(file_path)
-    print(evaluation_result)
+    style_info = None
+    if file_path.endswith(('.js', '.ts')):
+        style_info = evaluate_code(file_path, "TypeScript")
+    elif file_path.endswith('.py'):
+        style_info = evaluate_code(file_path, "Python")
+    else:
+        return {"error": f"Unsupported file type for evaluation: {file_path}"}
+    if style_info.startswith("```json"):
+        cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
+    else:
+        # Fallback for cases where it might just be wrapped in ```
+        cleaned_text = style_info.strip().strip("`").strip()
+    #evaluation_result = evaluate_code(file_path)
+    print(cleaned_text)
 
 
 if __name__ == "__main__":
