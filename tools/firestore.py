@@ -16,21 +16,22 @@ def create(collection_name: str, document_id: str, document_payload: Dict[str, A
         document_payload: The data to write to the document.
     """
     # Get Firestore project ID and credentials file path from environment variables
-    project_id = os.getenv("FIRESTORE_PROJECT_ID")
+    project_id = os.getenv("PROJECT_ID")
     credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    firestore_db = os.getenv("FIRESTORE_DB")
 
     if not project_id:
-        print("Error: FIRESTORE_PROJECT_ID environment variable not set.")
+        print("Error: PROJECT_ID environment variable not set.")
         return
 
     # Initialize Firestore client
     try:
         if credentials_path and os.path.exists(credentials_path):
-            db = firestore.Client(project=project_id, database="(default)") # Assuming default database
+            db = firestore.Client(project=project_id, database=firestore_db) # Assuming default database
         else:
              # If GOOGLE_APPLICATION_CREDENTIALS is not set or file not found,
              # Firestore client will attempt to use default credentials (e.g., from gcloud)
-            db = firestore.Client(project=project_id, database="(default)") # Assuming default database
+            db = firestore.Client(project=project_id, database=firestore_db) # Assuming default database
 
     except Exception as e:
         print(f"Error initializing Firestore client: {e}")

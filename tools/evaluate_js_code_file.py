@@ -30,13 +30,19 @@ def evaluate_code(file_path):
     prompt = prompt_template + code
 
     # Vertex AI configuration
-    PROJECT_ID = os.environ.get("PROJECT_ID")  # Replace with your project ID
-    LOCATION = "us-central1"  # Replace with your location
-    MODEL_NAME = "gemini-2.5-flash-preview-05-20"
+    PROJECT_ID = os.getenv("PROJECT_ID")
+    LOCATION = os.getenv("VERTEXAI_LOCATION")
+    MODEL_NAME = os.getenv("VERTEXAI_MODEL_NAME")
+
+    if not PROJECT_ID or not LOCATION or not MODEL_NAME:
+        return json.dumps({"error": "Missing Vertex AI environment variables (PROJECT_ID, VERTEXAI_LOCATION, or VERTEXAI_MODEL_NAME)."})
 
     # Initialize Vertex AI client
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
-    model = GenerativeModel(MODEL_NAME)
+    try:
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+        model = GenerativeModel(MODEL_NAME)
+    except Exception as e:
+        return json.dumps({"error": f"Error initializing Vertex AI client or model: {e}"})
     response = model.generate_content(prompt)
 
     return response.candidates[0].content.parts[0].text

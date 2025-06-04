@@ -6,6 +6,7 @@ from tools.git_file_processor import get_git_data
 from tools.evaluate_js_code_file import evaluate_code as evaluate_js_code
 from tools.evaluate_py_code_file import evaluate_code as evaluate_py_code
 from tools.extract_region_tags import extract_region_tags
+from tools.firestore import create
 
 def process_file(file_link):
     #try:
@@ -38,6 +39,24 @@ def process_file(file_link):
         "region_tags": js_info,
         "evaluation_data": json.loads(cleaned_text)
     }
+
+    # Determine language for collection name
+    language = None
+    if file_link.endswith(('.js', '.ts')):
+        language = "Javascript"
+    elif file_link.endswith('.py'):
+        language = "Python"
+
+    # Write to Firestore if git info and language are available
+    if "git_info" in result and "github_link" in result["git_info"] and language:
+        github_link = result["git_info"]["github_link"]
+        # Use github_link as document_id, replace characters not allowed in Firestore document IDs
+        document_id = github_link.replace("/", "_").replace(".", "_").replace(":", "_").replace("-", "_") # Example replacement, adjust as needed
+        create(language, document_id, result)
+    elif not language:
+        print(f"Skipping Firestore write for unsupported file type: {file_link}")
+    else:
+        print(f"Skipping Firestore write for file not in git repository: {file_link}")
 
     return result
 
