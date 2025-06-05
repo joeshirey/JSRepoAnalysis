@@ -16,7 +16,8 @@ def create(collection_name: str, document_id: str, document_payload: Dict[str, A
         document_payload: The data to write to the document.
     """
     # Get Firestore project ID and credentials file path from environment variables
-    project_id = os.getenv("PROJECT_ID")
+    project_id = os.getenv("FIRESTORE_PROJECT_ID")
+    #credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     firestore_db = os.getenv("FIRESTORE_DB")
     print(firestore_db)

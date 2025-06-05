@@ -9,6 +9,10 @@ from tools.git_file_processor import get_git_data
 from tools.evaluate_code_file import evaluate_code
 from tools.extract_region_tags import extract_region_tags
 from tools.firestore import create
+from dotenv import load_dotenv
+
+
+
 
 def process_file(file_link):
     #try:
@@ -80,6 +84,7 @@ def process_file(file_link):
 
 
 def main():
+    load_dotenv()
     parser = argparse.ArgumentParser(description="Process a code file or directory.")
     parser.add_argument("file_link", help="Path to the code file or directory.")
     args = parser.parse_args()
