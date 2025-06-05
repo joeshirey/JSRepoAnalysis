@@ -19,7 +19,7 @@ def create(collection_name: str, document_id: str, document_payload: Dict[str, A
     project_id = os.getenv("PROJECT_ID")
     credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     firestore_db = os.getenv("FIRESTORE_DB")
-
+    print(firestore_db)
     if not project_id:
         print("Error: PROJECT_ID environment variable not set.")
         return
