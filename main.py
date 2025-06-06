@@ -83,13 +83,13 @@ def process_file(file_link):
 
 
 
-def main():
+def main(input_path=None):
     load_dotenv()
-    parser = argparse.ArgumentParser(description="Process a code file or directory.")
-    parser.add_argument("file_link", help="Path to the code file or directory.")
-    args = parser.parse_args()
-
-    input_path = args.file_link
+    if input_path is None:
+        parser = argparse.ArgumentParser(description="Process a code file or directory.")
+        parser.add_argument("file_link", help="Path to the code file or directory.")
+        args = parser.parse_args()
+        input_path = args.file_link
 
     if os.path.isfile(input_path):
         print(f"Processing file: {input_path}")
