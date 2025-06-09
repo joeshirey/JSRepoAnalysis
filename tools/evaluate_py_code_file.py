@@ -11,7 +11,7 @@ def fill_prompt_placeholders(prompt_template_string: str, language: str, code_sa
 
     Args:
         prompt_template_string (str): The prompt template as a string.
-        language (str): The programming language (e.g., "Python", "TypeScript").
+        language (str): The programming language (e.g., "Python", "Javascript").
         code_sample (str): The actual code sample to be evaluated.
 
     Returns:

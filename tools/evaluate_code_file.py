@@ -11,7 +11,7 @@ def fill_prompt_placeholders(prompt_template_string: str, language: str, code_sa
 
     Args:
         prompt_template_string (str): The prompt template as a string.
-        language (str): The programming language (e.g., "Python", "TypeScript").
+        language (str): The programming language (e.g., "Python", "Javascript").
         code_sample (str): The actual code sample to be evaluated.
 
     Returns:
@@ -110,7 +110,7 @@ def main():
     file_path = args.file_path
     style_info = None
     if file_path.endswith(('.js', '.ts')):
-        style_info = evaluate_code(file_path, "TypeScript")
+        style_info = evaluate_code(file_path, "Javascript")
     elif file_path.endswith('.py'):
         style_info = evaluate_code(file_path, "Python")
     else:

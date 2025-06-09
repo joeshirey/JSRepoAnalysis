@@ -7,7 +7,7 @@ import sys
 
 def extract_region_tags(file_path):
     """
-    Extracts unique region tags from a JavaScript, TypeScript, or Python file.
+    Extracts unique region tags from a JavaScript, Javascript, or Python file.
     """
     region_tags = set()
     try:
@@ -31,7 +31,7 @@ def extract_region_tags(file_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract region tags from a JavaScript, TypeScript, or Python file.")
+    parser = argparse.ArgumentParser(description="Extract region tags from a JavaScript, Typescript, or Python file.")
     parser.add_argument("file_path", help="Path to the JavaScript, TypeScript, or Python file.")
 
     args = parser.parse_args()

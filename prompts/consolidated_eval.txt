@@ -47,7 +47,7 @@ Produce a JSON object with the following structure. Be very transparent about ho
     *   Is the code sample runnable by default?
     *   Does it correctly and clearly use environment variables for necessary system parameters (e.g., GCP project ID, region/location) if applicable?
     *   Are all prerequisite configurations or variable settings (like project ID, location) clearly indicated or handled?
-    *   Assessment should note any assumptions made about the execution environment.
+    *   Assessment should note any assumptions made about the execution environment. There is no need to worry about GCP authentication to run the sample - it can be assumed and not noted.
 
 2.  **API Effectiveness (googleapis/googleapis) (Weight: 0.40)**
     *   Does the sample effectively demonstrate the usage of the relevant GCP API methods (as defined in `googleapis/googleapis`)?
@@ -63,12 +63,13 @@ Produce a JSON object with the following structure. Be very transparent about ho
 4.  **Formatting & Consistency (Weight: 0.10)**
     *   Is the code formatting consistent *within* the provided sample?
     *   Does it adhere to generally accepted formatting conventions for **{{LANGUAGE}}**?
-        *   For Python: Adherence to PEP 8.
-        *   For TypeScript: Adherence to common style guides (e.g., consistent with Prettier or a standard ESLint configuration).
-    *   (Note: You can only assess internal consistency. State that cross-sample consistency cannot be fully judged from a single sample).
+        *   For Python: Adherence to PEP 8. Ignore line length issues.
+        *   For Javascript: Adherence to common style guides (e.g., consistent with Prettier or a standard ESLint configuration).
+    *   (Note: You can only assess internal consistency. Do not bother stating that cross-sample consistency cannot be fully judged from a single sample).
+    *   Ignore any errors related to copyright year
 
 5.  **Language Best Practices (Weight: 0.20)**
-    *   Does the code follow generally accepted best practices for **{{LANGUAGE}}** (e.g., idiomatic constructs, proper variable naming, efficient use of language features, appropriate error handling patterns for the language)?
+    *   Does the code follow generally accepted best practices for **{{LANGUAGE}}** (e.g., idiomatic constructs, proper variable naming, efficient use of language features, appropriate rudimentary error handling patterns for the language)?
     *   Avoidance of anti-patterns or deprecated features for the given language.
 
 **Instructions for the AI Reviewer:**
