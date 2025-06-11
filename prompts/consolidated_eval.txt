@@ -54,6 +54,7 @@ Produce a JSON object with the following structure. Be very transparent about ho
     *   Are the most important and relevant parameters for the demonstrated API call being used correctly and clearly?
     *   Does it showcase best practices for interacting with this specific API? (e.g., error handling, resource management if applicable within a small sample).
     *   Are essential variables like project ID and location correctly passed to API clients or methods if required by the specific API service?
+    *   Does the sample implement rudimentary error handling (there is no need to handle specific API errors, just rudimentary error handling)
 
 3.  **Comments & Code Clarity (Weight: 0.10)**
     *   Are comments helpful and explanatory without being overly verbose or redundant?
