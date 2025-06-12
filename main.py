@@ -93,7 +93,7 @@ def process_file(file_link, regen=False):
 
 
 def main(input_path=None, regen_arg=False):
-    load_dotenv()
+    load_dotenv(override=True)
     if input_path is None:
         parser = argparse.ArgumentParser(description="Process a code file or directory.")
         parser.add_argument("file_link", help="Path to the code file or directory.")

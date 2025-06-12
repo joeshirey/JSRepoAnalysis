@@ -25,6 +25,10 @@ class TkinterUI:
         self.output_text = tk.Text(master, height=20, width=80)
         self.output_text.pack(pady=10)
 
+        self.regen_var = tk.BooleanVar()
+        self.regen_checkbox = tk.Checkbutton(master, text="Regenerate database entries", variable=self.regen_var)
+        self.regen_checkbox.pack(pady=5)
+
         self.selected_path = None
 
     def select_file(self):
@@ -52,7 +56,8 @@ class TkinterUI:
             sys.stdout = redirected_output
 
             try:
-                process_main_function(self.selected_path)
+                regen_flag = self.regen_var.get()
+                process_main_function(self.selected_path, regen_arg=regen_flag)
                 output = redirected_output.getvalue()
                 self.output_text.insert(tk.END, output)
             except Exception as e:
