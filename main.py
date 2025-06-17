@@ -41,8 +41,11 @@ def process_file(file_link, regen=False):
         if not regen:
             existing_doc = read(language, document_id)
             if existing_doc:
-                print(f"{file_link} already processed, skipping.")
-                return existing_doc # Return existing data if found and not regenerating
+                last_updated_date_in_db = existing_doc['git_info']['last_updated']
+                last_update_date_in_gh = git_info['last_updated']
+                if last_updated_date_in_db == last_update_date_in_gh and existing_doc:
+                    print(f"{file_link} already processed, skipping.")
+                    return existing_doc # Return existing data if found and not regenerating
     else:
         print(f"Skipping processing for file not in git repository: {file_link}")
         return {"error": f"File not in git repository: {file_link}"}
