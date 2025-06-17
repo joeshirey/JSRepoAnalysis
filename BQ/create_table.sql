@@ -16,5 +16,6 @@ CREATE TABLE `project.datastore.table` (
   consistency_assessment STRING OPTIONS(description="Assessment for 'Formatting & Consistency' criterion."),
   language_score INTEGER OPTIONS(description="Score for 'Language Best Practices' criterion."),
   language_assessment STRING OPTIONS(description="Assessment for 'Language Best Practices' criterion."),
-  github_link STRING OPTIONS(description="Direct link to file in GitHub")
+  github_link STRING OPTIONS(description="Direct link to file in GitHub"),
+  last_updated_date TIMESTAMP OPTIONS(description="Last updated in GitHub")
 )
