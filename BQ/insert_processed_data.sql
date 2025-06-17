@@ -1,10 +1,14 @@
-MERGE `project.BQ_dataset.table` AS T
+MERGE `joeshireylearn-374523.existing_samples.samples_data_extracted` AS T
 USING (
     -- This subquery selects and transforms the new data from your raw JSON table.
-    -- It's the same logic as your previous SELECT statement.
+    -- It now includes the new last_updated_date column.
     SELECT
         JSON_EXTRACT_ARRAY(t.data, '$.region_tags') AS region_tags,
         PARSE_TIMESTAMP('%Y-%m-%d %H:%M', JSON_EXTRACT_SCALAR(t.data, '$.evaluation_date')) AS evaluation_date,
+        
+        -- New column added to extract and parse the last_updated date string.
+        PARSE_TIMESTAMP('%Y-%m-%d', JSON_EXTRACT_SCALAR(t.data, '$.git_info.last_updated')) AS last_updated_date,
+
         REGEXP_EXTRACT(JSON_EXTRACT_SCALAR(t.data, '$.git_info.github_link'), r'\/blob\/main\/([^\/]+)\/') AS product_area,
         JSON_EXTRACT_SCALAR(t.data, '$.git_info.github_link') AS github_link,
         JSON_EXTRACT(t.data, '$.git_info') AS git_info_raw_json,
@@ -24,12 +28,12 @@ USING (
         (
             SELECT CAST(JSON_EXTRACT_SCALAR(criterion, '$.score') AS INT64)
             FROM UNNEST(JSON_EXTRACT_ARRAY(t.data, '$.evaluation_data.criteria_breakdown')) AS criterion
-            WHERE JSON_EXTRACT_SCALAR(criterion, '$.criterion_name') = 'API Effectiveness (googleapis/googleapis)'
+            WHERE JSON_EXTRACT_SCALAR(criterion, '$.criterion_name') = 'API Effectiveness'
         ) AS api_effectiveness_score,
         (
             SELECT JSON_EXTRACT_SCALAR(criterion, '$.assessment')
             FROM UNNEST(JSON_EXTRACT_ARRAY(t.data, '$.evaluation_data.criteria_breakdown')) AS criterion
-            WHERE JSON_EXTRACT_SCALAR(criterion, '$.criterion_name') = 'API Effectiveness (googleapis/googleapis)'
+            WHERE JSON_EXTRACT_SCALAR(criterion, '$.criterion_name') = 'API Effectiveness'
         ) AS api_effectiveness_assessment,
         (
             SELECT CAST(JSON_EXTRACT_SCALAR(criterion, '$.score') AS INT64)
@@ -62,7 +66,7 @@ USING (
             WHERE JSON_EXTRACT_SCALAR(criterion, '$.criterion_name') = 'Language Best Practices'
         ) AS language_assessment
     FROM
-        `project.BQ_dataset.table` AS t
+        `joeshireylearn-374523.existing_samples.samples_raw_latest` AS t
     WHERE
         -- Pre-filter the source data as before
         JSON_EXTRACT_ARRAY(t.data, '$.region_tags') IS NOT NULL
@@ -77,6 +81,7 @@ WHEN NOT MATCHED BY TARGET THEN
     INSERT (
         region_tags,
         evaluation_date,
+        last_updated_date, 
         product_area,
         github_link,
         git_info_raw_json,
@@ -92,11 +97,13 @@ WHEN NOT MATCHED BY TARGET THEN
         consistency_score,
         consistency_assessment,
         language_score,
-        language_assessment
+        language_assessment,
+        sample_language
     )
     VALUES (
         S.region_tags,
         S.evaluation_date,
+        S.last_updated_date, 
         S.product_area,
         S.github_link,
         S.git_info_raw_json,
@@ -112,5 +119,6 @@ WHEN NOT MATCHED BY TARGET THEN
         S.consistency_score,
         S.consistency_assessment,
         S.language_score,
-        S.language_assessment
+        S.language_assessment,
+        "Python"
     );
