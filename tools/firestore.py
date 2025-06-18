@@ -1,10 +1,51 @@
 import os
 from dotenv import load_dotenv
 from google.cloud import firestore
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # Load environment variables from .env file
 load_dotenv()
+
+class FirestoreClient:
+    _instance = None
+    _db: Optional[firestore.Client] = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(FirestoreClient, cls).__new__(cls)
+        return cls._instance
+
+    def open_connection(self):
+        if self._db is None:
+            project_id = os.getenv("FIRESTORE_PROJECT_ID")
+            credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            firestore_db_name = os.getenv("FIRESTORE_DB")
+
+            if not project_id:
+                print("Error: FIRESTORE_PROJECT_ID environment variable not set.")
+                return
+
+            try:
+                if credentials_path and os.path.exists(credentials_path):
+                    self._db = firestore.Client(project=project_id, database=firestore_db_name)
+                else:
+                    self._db = firestore.Client(project=project_id, database=firestore_db_name)
+                print("Firestore connection opened.")
+            except Exception as e:
+                print(f"Error initializing Firestore client: {e}")
+                self._db = None
+
+    def close_connection(self):
+        if self._db:
+            # Firestore client doesn't have an explicit close method,
+            # but setting it to None allows for re-initialization if needed.
+            self._db = None
+            print("Firestore connection closed (client released).")
+
+    def get_db(self) -> Optional[firestore.Client]:
+        if self._db is None:
+            print("Warning: Firestore connection not open. Call open_connection() first.")
+        return self._db
 
 def create(collection_name: str, document_id: str, document_payload: Dict[str, Any]):
     """
@@ -15,30 +56,11 @@ def create(collection_name: str, document_id: str, document_payload: Dict[str, A
         document_id: The ID of the document to create.
         document_payload: The data to write to the document.
     """
-    # Get Firestore project ID and credentials file path from environment variables
-    project_id = os.getenv("FIRESTORE_PROJECT_ID")
-    #credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    firestore_db = os.getenv("FIRESTORE_DB")
-    print(firestore_db)
-    if not project_id:
-        print("Error: PROJECT_ID environment variable not set.")
+    db = FirestoreClient().get_db()
+    if not db:
+        print("Error: Firestore client not available for create operation.")
         return
 
-    # Initialize Firestore client
-    try:
-        if credentials_path and os.path.exists(credentials_path):
-            db = firestore.Client(project=project_id, database=firestore_db) # Assuming default database
-        else:
-             # If GOOGLE_APPLICATION_CREDENTIALS is not set or file not found,
-             # Firestore client will attempt to use default credentials (e.g., from gcloud)
-            db = firestore.Client(project=project_id, database=firestore_db) # Assuming default database
-
-    except Exception as e:
-        print(f"Error initializing Firestore client: {e}")
-        return
-
-    # Write the document
     try:
         doc_ref = db.collection(collection_name).document(document_id)
         doc_ref.set(document_payload)
@@ -57,21 +79,9 @@ def read(collection_name: str, document_id: str) -> Dict[str, Any] | None:
     Returns:
         The document data as a dictionary if found, otherwise None.
     """
-    project_id = os.getenv("FIRESTORE_PROJECT_ID")
-    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    firestore_db = os.getenv("FIRESTORE_DB")
-
-    if not project_id:
-        print("Error: PROJECT_ID environment variable not set.")
-        return None
-
-    try:
-        if credentials_path and os.path.exists(credentials_path):
-            db = firestore.Client(project=project_id, database=firestore_db)
-        else:
-            db = firestore.Client(project=project_id, database=firestore_db)
-    except Exception as e:
-        print(f"Error initializing Firestore client: {e}")
+    db = FirestoreClient().get_db()
+    if not db:
+        print("Error: Firestore client not available for read operation.")
         return None
 
     try:
@@ -99,21 +109,9 @@ def read_all_in_collection(collection_name: str) -> list[Dict[str, Any]]:
         with its ID and data. Returns an empty list if no documents are found
         or an error occurs.
     """
-    project_id = os.getenv("FIRESTORE_PROJECT_ID")
-    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    firestore_db = os.getenv("FIRESTORE_DB")
-
-    if not project_id:
-        print("Error: PROJECT_ID environment variable not set.")
-        return []
-
-    try:
-        if credentials_path and os.path.exists(credentials_path):
-            db = firestore.Client(project=project_id, database=firestore_db)
-        else:
-            db = firestore.Client(project=project_id, database=firestore_db)
-    except Exception as e:
-        print(f"Error initializing Firestore client: {e}")
+    db = FirestoreClient().get_db()
+    if not db:
+        print("Error: Firestore client not available for read_all_in_collection operation.")
         return []
 
     documents_data = []
@@ -132,5 +130,8 @@ def read_all_in_collection(collection_name: str) -> list[Dict[str, Any]]:
 if __name__ == '__main__':
     # Example usage (replace with your actual collection, document ID, and payload)
     # Ensure .env has FIRESTORE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS (optional)
+    # client = FirestoreClient()
+    # client.open_connection()
     # create("my_collection", "my_document", {"key": "value", "number": 123})
+    # client.close_connection()
     pass

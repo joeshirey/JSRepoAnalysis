@@ -8,7 +8,7 @@ from tools.git_file_processor import get_git_data
 #from tools.evaluate_py_code_file import evaluate_code as evaluate_py_code
 from tools.evaluate_code_file import evaluate_code
 from tools.extract_region_tags import extract_region_tags
-from tools.firestore import create, read
+from tools.firestore import create, read, FirestoreClient
 from dotenv import load_dotenv
 
 
@@ -43,7 +43,7 @@ def process_file(file_link, regen=False):
             if existing_doc:
                 last_updated_date_in_db = existing_doc['git_info']['last_updated']
                 last_update_date_in_gh = git_info['last_updated']
-                if last_updated_date_in_db == last_update_date_in_gh and existing_doc:
+                if last_updated_date_in_db == last_update_date_in_gh:
                     print(f"{file_link} already processed, skipping.")
                     return existing_doc # Return existing data if found and not regenerating
     else:
@@ -97,29 +97,35 @@ def process_file(file_link, regen=False):
 
 def main(input_path=None, regen_arg=False):
     load_dotenv(override=True)
-    if input_path is None:
-        parser = argparse.ArgumentParser(description="Process a code file or directory.")
-        parser.add_argument("file_link", help="Path to the code file or directory.")
-        parser.add_argument("--regen", action="store_true", help="Overwrite existing Firestore entry if true.")
-        args = parser.parse_args()
-        input_path = args.file_link
-        regen_arg = args.regen
+    firestore_client = FirestoreClient()
+    firestore_client.open_connection()
 
-    if os.path.isfile(input_path):
-        print(f"Processing file: {input_path}")
-        result = process_file(input_path, regen=regen_arg)
-        #print(json.dumps(result, indent=4))
-    elif os.path.isdir(input_path):
-        print(f"Processing directory: {input_path}")
-        for root, dirs, files in os.walk(input_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                if file_path.endswith(('.js', '.ts', '.py')):
-                    print(f"Processing file: {file_path}")
-                    result = process_file(file_path, regen=regen_arg)
-                    #print(json.dumps(result, indent=4))
-    else:
-        print(f"Error: Invalid path provided: {input_path}")
+    try:
+        if input_path is None:
+            parser = argparse.ArgumentParser(description="Process a code file or directory.")
+            parser.add_argument("file_link", help="Path to the code file or directory.")
+            parser.add_argument("--regen", action="store_true", help="Overwrite existing Firestore entry if true.")
+            args = parser.parse_args()
+            input_path = args.file_link
+            regen_arg = args.regen
+
+        if os.path.isfile(input_path):
+            print(f"Processing file: {input_path}")
+            result = process_file(input_path, regen=regen_arg)
+            #print(json.dumps(result, indent=4))
+        elif os.path.isdir(input_path):
+            print(f"Processing directory: {input_path}")
+            for root, dirs, files in os.walk(input_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    if file_path.endswith(('.js', '.ts', '.py')):
+                        print(f"Processing file: {file_path}")
+                        result = process_file(file_path, regen=regen_arg)
+                        #print(json.dumps(result, indent=4))
+        else:
+            print(f"Error: Invalid path provided: {input_path}")
+    finally:
+        firestore_client.close_connection()
 
 
 if __name__ == "__main__":
