@@ -127,6 +127,25 @@ def read_all_in_collection(collection_name: str) -> list[Dict[str, Any]]:
         print(f"Error reading all documents from collection '{collection_name}': {e}")
         return []
 
+def delete(collection_name: str, document_id: str):
+    """
+    Deletes a document from a Firestore collection.
+
+    Args:
+        collection_name: The name of the Firestore collection.
+        document_id: The ID of the document to delete.
+    """
+    db = FirestoreClient().get_db()
+    if not db:
+        print("Error: Firestore client not available for delete operation.")
+        return
+
+    try:
+        db.collection(collection_name).document(document_id).delete()
+        print(f"Document '{document_id}' successfully deleted from collection '{collection_name}'.")
+    except Exception as e:
+        print(f"Error deleting document from Firestore: {e}")
+
 if __name__ == '__main__':
     # Example usage (replace with your actual collection, document ID, and payload)
     # Ensure .env has FIRESTORE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS (optional)
