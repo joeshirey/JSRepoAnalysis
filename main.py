@@ -69,11 +69,19 @@ def process_file(file_link, regen=False):
             else:
                 # Fallback for cases where it might just be wrapped in ```
                 cleaned_text = style_info.strip().strip("`").strip()
+
+        # Read the content of the file
+        try:
+            with open(file_link, 'r') as f:
+                raw_code = f.read()
+        except Exception as e:
+            raw_code = f"Error reading file: {e}"
     
         result = {
             "git_info": git_info,
             "region_tags": js_info,
             "evaluation_data": json.loads(cleaned_text),
+            "raw_code": raw_code,
             "evaluation_date": datetime.now().strftime("%Y-%m-%d %H:%M")
         }
         

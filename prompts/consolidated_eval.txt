@@ -16,6 +16,8 @@ Produce a JSON object with the following structure. Be very transparent about ho
 **JSON Output Schema:**
 ```json
 {
+  "product_category": "string (The primary inferred GCP product category from the table below that this sample is demonstrating)",
+  "product_name": "string (The primary inferred GCP product from the table below that this sample is demonstrating)"
   "overall_compliance_score": "integer (0-100)",
   "score_calculation_methodology": "string (Describe how the overall score is calculated, including weights for each criterion. Use the weights specified below.)",
   "criteria_breakdown": [
@@ -87,5 +89,156 @@ Produce a JSON object with the following structure. Be very transparent about ho
 *   The `generic_problem_categories` should be drawn from a reasonably consistent vocabulary to allow for later analysis of common issues.
 *   Ensure the `overall_compliance_score` is a weighted average of the individual criterion scores, using the specified weights.
 *   The `score_calculation_methodology` field must clearly state this weighting.
+
+Use the following table to determine the primary GCP product and category being demonstrated. Use the names below and choose the most likely one. If there is no match at all, please use category and product Other/Other
+
+| Category | Product |
+| :--- | :--- |
+| AI and Machine Learning | Vertex AI |
+| AI and Machine Learning | Gemini |
+| AI and Machine Learning | Translation AI |
+| AI and Machine Learning | Vision AI |
+| AI and Machine Learning | Document AI |
+| AI and Machine Learning | Speech-to-Text |
+| AI and Machine Learning | Text-to-Speech |
+| AI and Machine Learning | Cloud Natural Language API |
+| AI and Machine Learning | Dialogflow |
+| AI and Machine Learning | Recommendations AI |
+| AI and Machine Learning | Contact Center AI |
+| AI and Machine Learning | Anti Money Laundering AI |
+| AI and Machine Learning | Cloud Healthcare API |
+| AI and Machine Learning | Cloud Life Sciences |
+| AI and Machine Learning | Immersive Stream for XR |
+| AI and Machine Learning | Deep Learning VM Image |
+| AI and Machine Learning | Deep Learning Containers |
+| AI and Machine Learning | TensorFlow Enterprise |
+| API Management | Apigee |
+| API Management | API Gateway |
+| API Management | Cloud Endpoints |
+| Compute | Compute Engine |
+| Compute | App Engine |
+| Compute | Bare Metal |
+| Compute | Cloud GPUs |
+| Compute | Cloud TPUs |
+| Compute | Migrate to Virtual Machines |
+| Compute | Recommender |
+| Compute | Shielded VMs |
+| Compute | Sole-Tenant Nodes |
+| Compute | Spot VMs |
+| Compute | VMware Engine |
+| Compute | Batch |
+| Containers | Google Kubernetes Engine (GKE) |
+| Containers | Artifact Registry |
+| Containers | Cloud Run |
+| Containers | Knative |
+| Containers | Migrate for Anthos and GKE |
+| Containers | Binary Authorization |
+| Data Analytics | BigQuery |
+| Data Analytics | Looker |
+| Data Analytics | Dataflow |
+| Data Analytics | Dataproc |
+| Data Analytics | Pub/Sub |
+| Data Analytics | Cloud Data Fusion |
+| Data Analytics | Cloud Composer |
+| Data Analytics | BigLake |
+| Data Analytics | Dataplex |
+| Data Analytics | Dataform |
+| Data Analytics | Analytics Hub |
+| Data Analytics | Datastream |
+| Data Analytics | Earth Engine |
+| Databases | AlloyDB for PostgreSQL |
+| Databases | Cloud SQL |
+| Databases | Spanner |
+| Databases | Firestore |
+| Databases | Memorystore |
+| Databases | Bigtable |
+| Databases | Database Migration Service |
+| Developer Tools | Cloud Build |
+| Developer Tools | Cloud Code |
+| Developer Tools | Cloud Deploy |
+| Developer Tools | Cloud Deployment Manager |
+| Developer Tools | Cloud SDK |
+| Developer Tools | Cloud Source Repositories |
+| Developer Tools | Cloud Tasks |
+| Developer Tools | Cloud Workstations |
+| Developer Tools | Gemini Code Assist |
+| Developer Tools | Cloud Functions |
+| Developer Tools | Cloud Shell |
+| Developer Tools | Cloud Scheduler |
+| Developer Tools | Terraform on Google Cloud |
+| Developer Tools | Tekton |
+| Developer Tools | Skaffold |
+| Distributed Cloud | Google Distributed Cloud |
+| Hybrid and Multicloud | Anthos |
+| Integration Services | Application Integration |
+| Integration Services | Workflows |
+| Integration Services | Eventarc |
+| Integration Services | Live Stream API |
+| Management Tools | Cloud APIs |
+| Management Tools | Cloud Billing |
+| Management Tools | Cloud Console |
+| Management Tools | Cloud Logging |
+| Management Tools | Cloud Monitoring |
+| Management Tools | Cost Management |
+| Management Tools | Carbon Footprint |
+| Management Tools | Active Assist |
+| Management Tools | Service Catalog |
+| Management Tools | Cloud Observability |
+| Management Tools | Cloud Trace |
+| Management Tools | Cloud Profiler |
+| Networking | Virtual Private Cloud (VPC) |
+| Networking | Cloud Load Balancing |
+| Networking | Cloud CDN |
+| Networking | Cloud DNS |
+| Networking | Cloud NAT |
+| Networking | Cloud VPN |
+| Networking | Cloud Interconnect |
+| Networking | Cloud Router |
+| Networking | Network Connectivity Center |
+| Networking | Network Service Tiers |
+| Networking | Network Intelligence Center |
+| Networking | Private Service Connect |
+| Productivity and Collaboration | AppSheet |
+| Productivity and Collaboration | Google Workspace |
+| Productivity and Collaboration | Chrome Enterprise |
+| Security and Identity | Cloud IAM |
+| Security and Identity | Sensitive Data Protection |
+| Security and Identity | Mandiant |
+| Security and Identity | Google Threat Intelligence |
+| Security and Identity | Security Command Center |
+| Security and Identity | Cloud Key Management |
+| Security and Identity | Assured Workloads |
+| Security and Identity | Google Security Operations |
+| Security and Identity | reCAPTCHA Enterprise |
+| Security and Identity | Titan Security Key |
+| Security and Identity | Secret Manager |
+| Security and Identity | Identity Platform |
+| Security and Identity | Identity-Aware Proxy |
+| Security and Identity | Cloud Armor |
+| Security and Identity | Cloud Firewall |
+| Security and Identity | Confidential Computing |
+| Security and Identity | Certificate Authority Service |
+| Security and Identity | VirusTotal |
+| Security and Identity | VPC Service Controls |
+| Security and Identity | Cloud IDS |
+| Security and Identity | Assured Open Source Software |
+| Security and Identity | Managed Service for Microsoft Active Directory |
+| Security and Identity | Access Transparency |
+| Security and Identity | Access Context Manager |
+| Security and Identity | Risk Manager |
+| Security and Identity | Web Risk |
+| Serverless | Cloud Run |
+| Serverless | Cloud Functions |
+| Serverless | App Engine |
+| Serverless | Workflows |
+| Storage | Cloud Storage |
+| Storage | Persistent Disk |
+| Storage | Filestore |
+| Storage | Local SSD |
+| Storage | Cloud Storage for Firebase |
+| Storage | Storage Transfer Service |
+| Storage | Google Cloud NetApp Volumes |
+| Storage | Backup and DR Service |
+| Web3 | Blockchain Node Engine |
 
 Begin evaluation now. Output ONLY the JSON object.
