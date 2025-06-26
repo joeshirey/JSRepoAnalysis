@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 
 
-def process_file(file_link, regen=False):
+def process_file(file_link, regen=False, db_name=None):
     #try:
     # Call git_file_processor.py
     
@@ -84,7 +84,6 @@ def process_file(file_link, regen=False):
             "raw_code": raw_code,
             "evaluation_date": datetime.now().strftime("%Y-%m-%d %H:%M")
         }
-        
         create(language, document_id, result)
 
     except Exception as e:
@@ -106,20 +105,26 @@ def process_file(file_link, regen=False):
 def main(input_path=None, regen_arg=False):
     load_dotenv(override=True)
     firestore_client = FirestoreClient()
-    firestore_client.open_connection()
+    
 
     try:
         if input_path is None:
             parser = argparse.ArgumentParser(description="Process a code file or directory.")
             parser.add_argument("file_link", help="Path to the code file or directory.")
             parser.add_argument("--regen", action="store_true", help="Overwrite existing Firestore entry if true.")
+            parser.add_argument("--db", nargs='?', const=None, help="Firestore database name (overrides environment variable).")
             args = parser.parse_args()
             input_path = args.file_link
             regen_arg = args.regen
+            db_name = args.db
+
+        if db_name is None:
+            db_name = os.getenv("FIRESTORE_DB")
+        firestore_client.open_connection(db_name=db_name)
 
         if os.path.isfile(input_path):
             print(f"Processing file: {input_path}")
-            result = process_file(input_path, regen=regen_arg)
+            result = process_file(input_path, regen=regen_arg, db_name=db_name)
             #print(json.dumps(result, indent=4))
         elif os.path.isdir(input_path):
             print(f"Processing directory: {input_path}")
@@ -128,7 +133,7 @@ def main(input_path=None, regen_arg=False):
                     file_path = os.path.join(root, file)
                     if file_path.endswith(('.js', '.ts', '.py')):
                         print(f"Processing file: {file_path}")
-                        result = process_file(file_path, regen=regen_arg)
+                        result = process_file(file_path, regen=regen_arg, db_name=db_name)
                         #print(json.dumps(result, indent=4))
         else:
             print(f"Error: Invalid path provided: {input_path}")

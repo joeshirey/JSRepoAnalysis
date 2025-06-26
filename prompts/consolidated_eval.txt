@@ -51,7 +51,7 @@ Produce a JSON object with the following structure. Be very transparent about ho
     *   Assessment should note any assumptions made about the execution environment. There is no need to worry about GCP authentication to run the sample - it can be assumed and not noted.
     * (Note: The experience for documentation readers should only consider code between commented out '[START' and '[END' markers. Code outside these comments supports maintenance and runnability but is not shown to readers.)
 
-2.  **API Effectiveness (googleapis/googleapis) (Weight: 0.40)**
+2.  **API Effectiveness (Weight: 0.40)**
     *   Does the sample effectively demonstrate the usage of the relevant GCP API methods (as defined in the GitHub repository `googleapis/googleapis`)?
     *   Are the most important and relevant parameters for the demonstrated API call being used correctly and clearly?
     *   Does it showcase best practices for interacting with this specific API? (e.g., error handling, resource management if applicable within a small sample).

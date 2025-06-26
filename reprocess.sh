@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Move errors.log to errors.copy.log, overwriting if it exists, and delete errors.log
+mv errors.log errors.copy.log
+rm errors.log
+
 # Exit immediately if a command exits with a non-zero status.
 set -e
 

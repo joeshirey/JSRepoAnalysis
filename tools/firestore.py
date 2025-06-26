@@ -15,11 +15,14 @@ class FirestoreClient:
             cls._instance = super(FirestoreClient, cls).__new__(cls)
         return cls._instance
 
-    def open_connection(self):
+    def open_connection(self, db_name: str = None):
         if self._db is None:
             project_id = os.getenv("FIRESTORE_PROJECT_ID")
             credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
             firestore_db_name = os.getenv("FIRESTORE_DB")
+
+            if db_name:
+                firestore_db_name = db_name
 
             if not project_id:
                 print("Error: FIRESTORE_PROJECT_ID environment variable not set.")
@@ -127,7 +130,7 @@ def read_all_in_collection(collection_name: str) -> list[Dict[str, Any]]:
         print(f"Error reading all documents from collection '{collection_name}': {e}")
         return []
 
-def delete(collection_name: str, document_id: str):
+def delete(collection_name: str):
     """
     Deletes a document from a Firestore collection.
 
@@ -147,10 +150,4 @@ def delete(collection_name: str, document_id: str):
         print(f"Error deleting document from Firestore: {e}")
 
 if __name__ == '__main__':
-    # Example usage (replace with your actual collection, document ID, and payload)
-    # Ensure .env has FIRESTORE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS (optional)
-    # client = FirestoreClient()
-    # client.open_connection()
-    # create("my_collection", "my_document", {"key": "value", "number": 123})
-    # client.close_connection()
     pass
