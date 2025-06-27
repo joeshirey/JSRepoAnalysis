@@ -1,8 +1,8 @@
 import json
 import os
 from datetime import datetime
-from tools.git_file_processor import get_git_data
-from tools.extract_region_tags import extract_region_tags
+from tools.git_file_processor import GitFileProcessor
+from tools.extract_region_tags import RegionTagExtractor
 from tools.firestore import create, read, FirestoreClient
 from strategies.strategy_factory import get_strategy
 
@@ -11,6 +11,8 @@ class CodeProcessor:
         self.firestore_client = FirestoreClient()
         self.db_name = db_name or os.getenv("FIRESTORE_DB")
         self.firestore_client.open_connection(db_name=self.db_name)
+        self.git_processor = GitFileProcessor()
+        self.tag_extractor = RegionTagExtractor()
 
     def process_file(self, file_path, regen=False):
         strategy = get_strategy(file_path)
@@ -18,7 +20,7 @@ class CodeProcessor:
             print(f"Skipping processing for unsupported file type: {file_path}")
             return {"error": f"Unsupported file type: {file_path}"}
 
-        git_info = get_git_data(file_path)
+        git_info = self.git_processor.execute(file_path)
         if "github_link" not in git_info:
             print(f"Skipping processing for file not in git repository: {file_path}")
             return {"error": f"File not in git repository: {file_path}"}
@@ -32,7 +34,7 @@ class CodeProcessor:
                 print(f"{file_path} already processed and up-to-date, skipping.")
                 return existing_doc
 
-        region_tags = extract_region_tags(file_path)
+        region_tags = self.tag_extractor.execute(file_path)
         if not region_tags:
             evaluation_data = {"error": "File not analyzed, no region tags"}
         else:
