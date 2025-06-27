@@ -11,14 +11,14 @@ from utils.data_classes import AnalysisResult
 from dataclasses import asdict
 
 class CodeProcessor:
-    def __init__(self, config):
-        self.config = config
-        self.firestore_repo = FirestoreRepository(config)
+    def __init__(self, settings):
+        self.settings = settings
+        self.firestore_repo = FirestoreRepository(settings)
         self.git_processor = GitFileProcessor()
         self.tag_extractor = RegionTagExtractor()
 
     def process_file(self, file_path, regen=False):
-        strategy = get_strategy(file_path, self.config)
+        strategy = get_strategy(file_path, self.settings)
         if not strategy:
             raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")
 

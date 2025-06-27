@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import Mock, patch
+from config import settings
 from tools.code_processor import CodeProcessor
 from utils.exceptions import UnsupportedFileTypeError, GitRepositoryError, NoRegionTagsError
 from utils.data_classes import AnalysisResult
@@ -7,12 +8,7 @@ from utils.data_classes import AnalysisResult
 class TestCodeProcessor(unittest.TestCase):
 
     def setUp(self):
-        self.config = Mock()
-        self.config.project_id = "test-project"
-        self.config.vertexai_location = "us-central1"
-        self.config.vertexai_model_name = "gemini-1.5-flash-001"
-        self.config.firestore_db = "test-db"
-        self.processor = CodeProcessor(self.config)
+        self.processor = CodeProcessor(settings)
 
     @patch('tools.code_processor.get_strategy')
     def test_process_file_unsupported_type(self, mock_get_strategy):

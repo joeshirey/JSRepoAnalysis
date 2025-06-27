@@ -10,8 +10,8 @@ class CodeEvaluator(BaseTool):
     def __init__(self, config):
         self.config = config
         try:
-            vertexai.init(project=self.config.project_id, location=self.config.vertexai_location)
-            self.model = GenerativeModel(self.config.vertexai_model_name)
+            vertexai.init(project=self.config.FIRESTORE_PROJECT_ID, location=self.config.VERTEXAI_LOCATION)
+            self.model = GenerativeModel(self.config.VERTEXAI_MODEL_NAME)
         except Exception as e:
             raise CodeEvaluatorError(f"Error initializing Vertex AI: {e}")
 

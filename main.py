@@ -2,7 +2,7 @@ import argparse
 import os
 import logging
 from datetime import datetime
-from config import Config
+from config import settings
 from tools.code_processor import CodeProcessor
 from strategies.strategy_factory import get_strategy
 from utils.logger import logger
@@ -18,8 +18,6 @@ def main():
     if not args.file_link and not args.reprocess_log:
         parser.error("Either file_link or --reprocess-log is required.")
 
-    config = Config(db_name=args.db)
-    
     log_filename_parts = ["errors", datetime.now().strftime("%Y-%m-%d")]
     if args.regen:
         log_filename_parts.append("regen")
@@ -48,14 +46,14 @@ def main():
         for root, _, files in os.walk(args.file_link):
             for file in files:
                 file_path = os.path.join(root, file)
-                if get_strategy(file_path, config):
+                if get_strategy(file_path, settings):
                     files_to_process.append(file_path)
 
     if not files_to_process:
         logger.info("No files to process.")
         return
 
-    processor = CodeProcessor(config)
+    processor = CodeProcessor(settings)
     try:
         for file_path in files_to_process:
             try:
