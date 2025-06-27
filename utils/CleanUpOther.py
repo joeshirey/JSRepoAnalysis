@@ -7,7 +7,7 @@ from google.cloud import firestore
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-def load_product_catalog(filename="product_catalog.json"):
+def load_product_catalog(filename="utils/product_catalog.json"):
     """Loads the product catalog from a JSON file."""
     if not os.path.exists(filename):
         # Try to find the file in the root directory
