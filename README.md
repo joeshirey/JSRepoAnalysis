@@ -1,6 +1,6 @@
-# JS/Python Codebase Analyzer
+# Code Quality Analyzer
 
-This tool analyzes a local codebase of JavaScript, TypeScript, and Python files, performs an AI-powered quality evaluation, and stores the results in a Firestore database.
+This tool analyzes a local codebase of JavaScript, TypeScript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files, performs an AI-powered quality evaluation, and stores the results in a Firestore database.
 
 ## Documentation
 
@@ -42,33 +42,41 @@ The tool uses a `.env` file to manage configuration.
     cp .env.sample .env
     ```
 2.  Edit the `.env` file and provide values for the following variables:
-    *   `PROJECT_ID`: Your Google Cloud Project ID.
+    *   `FIRESTORE_PROJECT_ID`: Your Google Cloud Project ID for Firestore.
     *   `VERTEXAI_LOCATION`: The Google Cloud region for Vertex AI (e.g., `us-central1`).
     *   `VERTEXAI_MODEL_NAME`: The name of the Gemini model to use (e.g., `gemini-1.5-flash-001`).
     *   `FIRESTORE_DB`: The name of the Firestore database to use.
 
 ## How to Run
 
-The tool can analyze either a single file or an entire directory.
+The tool can analyze a single file, an entire directory, or reprocess files from an error log.
 
-### Analyze a Single File
+### Analyze a Single File or Directory
 
 ```sh
+# Analyze a single file
 python main.py /path/to/your/file.js
-```
 
-### Analyze a Directory
-
-The tool will recursively scan the directory and process all supported files (`.js`, `.ts`, `.py`).
-
-```sh
+# Analyze a directory
 python main.py /path/to/your/directory/
 ```
 
-### Force Regeneration
+### Command-Line Arguments
 
-To force the tool to re-analyze files that have already been processed and stored in Firestore, use the `--regen` flag.
+*   `--regen`: Forces the tool to re-analyze files that have already been processed and stored in Firestore.
+*   `--db <database_name>`: Overrides the `FIRESTORE_DB` environment variable.
+*   `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
+
+### Reprocessing Errored Files
+
+If any files fail during a run, an error log will be created in the `logs/` directory. You can reprocess these files using the `--reprocess-log` flag:
 
 ```sh
-python main.py --regen /path/to/your/directory/
+python main.py --reprocess-log logs/errors_2025-06-27.log
+```
+
+You can also combine this with other flags, which will be applied to all files in the log:
+
+```sh
+python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other-db"
 ```
