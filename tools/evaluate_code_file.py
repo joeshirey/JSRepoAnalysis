@@ -11,11 +11,13 @@ class CodeEvaluator(BaseTool):
         self.config = config
         try:
             vertexai.init(project=self.config.FIRESTORE_PROJECT_ID, location=self.config.VERTEXAI_LOCATION)
-            self.model = GenerativeModel(self.config.VERTEXAI_MODEL_NAME)
+            with open("./prompts/system_instructions.txt", "r") as f:
+                system_instructions = f.read()
+            self.model = GenerativeModel(self.config.VERTEXAI_MODEL_NAME, system_instruction=system_instructions)
         except Exception as e:
             raise CodeEvaluatorError(f"Error initializing Vertex AI: {e}")
 
-    def execute(self, file_path, language, region_tag):
+    def execute(self, file_path, language, region_tag, github_link):
         """
         Evaluates code using the Gemini 2.5 Flash model on Vertex AI.
         """
@@ -37,7 +39,7 @@ class CodeEvaluator(BaseTool):
             raise CodeEvaluatorError(f"Error reading prompt file: {e}")
 
         # Inject code into prompt
-        prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code, github_link=file_path, region_tag=region_tag)
+        prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code, github_link=github_link, region_tag=region_tag)
 
         # Configure generation parameters for consistent output.
         generation_config = GenerationConfig(
@@ -59,9 +61,9 @@ class CodeEvaluator(BaseTool):
         Replaces placeholders in an existing prompt template string.
         """
         language_lowercase = language.lower()
-        filled_prompt = prompt_template_string.replace("{{LANGUAGE}}", language)
-        filled_prompt = filled_prompt.replace("{{LANGUAGE_LOWERCASE}}", language_lowercase)
-        filled_prompt = filled_prompt.replace("{{CODE_SAMPLE}}", code_sample)
-        filled_prompt = filled_prompt.replace("{{uri_placeholder}}", github_link)
-        filled_prompt = filled_prompt.replace("{{region_tag_id_placeholder}}", region_tag)
-        return filled_prompt
+        prompt = f"**LANGUAGE:**\n{language}\n\n"
+        prompt += f"**URI:**\n{github_link}\n\n"
+        prompt += f"**Region Tag ID:**\n{region_tag}\n\n"
+        prompt += f"**CODE_SAMPLE:**\n```{language_lowercase}\n{code_sample}\n```"
+        return prompt
+

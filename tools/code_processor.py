@@ -59,7 +59,7 @@ class CodeProcessor:
         if not region_tags:
             raise NoRegionTagsError("File not analyzed, no region tags")
 
-        evaluation_data = self._evaluate_code(strategy, file_path, region_tags[0])
+        evaluation_data = self._evaluate_code(strategy, file_path, region_tags[0], git_info["github_link"])
         raw_code = self._read_raw_code(file_path)
 
         return AnalysisResult(
@@ -69,8 +69,8 @@ class CodeProcessor:
             raw_code=raw_code
         )
 
-    def _evaluate_code(self, strategy, file_path, region_tag):
-        style_info = strategy.evaluate_code(file_path, region_tag)
+    def _evaluate_code(self, strategy, file_path, region_tag, github_link):
+        style_info = strategy.evaluate_code(file_path, region_tag, github_link)
         if style_info.startswith("```json"):
             cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
         else:
@@ -101,4 +101,6 @@ class CodeProcessor:
 
         git_info = self._get_git_info(file_path)
         analysis_result = self._analyze_file(file_path, strategy, git_info)
-        return asdict(analysis_result)
+        if analysis_result:
+            return asdict(analysis_result)
+        return None

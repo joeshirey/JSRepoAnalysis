@@ -25,7 +25,8 @@ def main():
         processor = CodeProcessor(settings)
         try:
             result = processor.analyze_file_only(args.file_link)
-            print(json.dumps(result, indent=4))
+            if result:
+                print(json.dumps(result, indent=4))
         except Exception as e:
             logger.error(f"Error during evaluation: {e}")
         return
