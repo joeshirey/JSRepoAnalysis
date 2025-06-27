@@ -3,14 +3,13 @@ import os
 from datetime import datetime
 from tools.git_file_processor import GitFileProcessor
 from tools.extract_region_tags import RegionTagExtractor
-from tools.firestore import create, read, FirestoreClient
+from tools.firestore import FirestoreRepository
 from strategies.strategy_factory import get_strategy
 
 class CodeProcessor:
     def __init__(self, config):
         self.config = config
-        self.firestore_client = FirestoreClient()
-        self.firestore_client.open_connection(db_name=self.config.firestore_db)
+        self.firestore_repo = FirestoreRepository(config)
         self.git_processor = GitFileProcessor()
         self.tag_extractor = RegionTagExtractor()
 
@@ -28,8 +27,9 @@ class CodeProcessor:
         github_link = git_info["github_link"]
         document_id = github_link.replace("/", "_").replace(".", "_").replace(":", "_").replace("-", "_")
 
+        collection_name = strategy.language
         if not regen:
-            existing_doc = read(strategy.__class__.__name__.replace("Strategy", ""), document_id)
+            existing_doc = self.firestore_repo.read(collection_name, document_id)
             if existing_doc and existing_doc.get('git_info', {}).get('last_updated') == git_info.get('last_updated'):
                 print(f"{file_path} already processed and up-to-date, skipping.")
                 return existing_doc
@@ -58,8 +58,8 @@ class CodeProcessor:
             "raw_code": raw_code,
             "evaluation_date": datetime.now().strftime("%Y-%m-%d %H:%M")
         }
-        create(strategy.__class__.__name__.replace("Strategy", ""), document_id, result)
+        self.firestore_repo.create(collection_name, document_id, result)
         return result
 
     def close(self):
-        self.firestore_client.close_connection()
+        self.firestore_repo.close()
