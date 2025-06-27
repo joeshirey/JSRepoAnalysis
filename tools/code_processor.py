@@ -13,9 +13,15 @@ from dataclasses import asdict
 class CodeProcessor:
     def __init__(self, settings):
         self.settings = settings
-        self.firestore_repo = FirestoreRepository(settings)
+        self._firestore_repo = None
         self.git_processor = GitFileProcessor()
         self.tag_extractor = RegionTagExtractor()
+
+    @property
+    def firestore_repo(self):
+        if self._firestore_repo is None:
+            self._firestore_repo = FirestoreRepository(self.settings)
+        return self._firestore_repo
 
     def process_file(self, file_path, regen=False):
         strategy = get_strategy(file_path, self.settings)
@@ -81,4 +87,14 @@ class CodeProcessor:
         self.firestore_repo.create(collection_name, document_id, asdict(result))
 
     def close(self):
-        self.firestore_repo.close()
+        if self._firestore_repo:
+            self._firestore_repo.close()
+
+    def analyze_file_only(self, file_path):
+        strategy = get_strategy(file_path, self.settings)
+        if not strategy:
+            raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")
+
+        git_info = self._get_git_info(file_path)
+        analysis_result = self._analyze_file(file_path, strategy, git_info)
+        return asdict(analysis_result)

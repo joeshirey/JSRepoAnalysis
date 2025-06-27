@@ -1,6 +1,7 @@
 import argparse
 import os
 import logging
+import json
 from datetime import datetime
 from config import settings
 from tools.code_processor import CodeProcessor
@@ -13,7 +14,20 @@ def main():
     parser.add_argument("--regen", action="store_true", help="Overwrite existing Firestore entry if true.")
     parser.add_argument("--db", help="Firestore database name (overrides environment variable).")
     parser.add_argument("--reprocess-log", help="Path to a log file to reprocess.")
+    parser.add_argument("--eval_only", action="store_true", help="Only evaluate a single file and print the result.")
     args = parser.parse_args()
+
+    if args.eval_only:
+        if not args.file_link or not os.path.isfile(args.file_link):
+            parser.error("--eval_only requires a single file path.")
+        
+        processor = CodeProcessor(settings)
+        try:
+            result = processor.analyze_file_only(args.file_link)
+            print(json.dumps(result, indent=4))
+        except Exception as e:
+            logger.error(f"Error during evaluation: {e}")
+        return
 
     if args.db:
         settings.FIRESTORE_DB = args.db
