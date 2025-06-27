@@ -3,12 +3,17 @@ import os
 import json
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from utils.logger import logger
+from utils.exceptions import CodeEvaluatorError
 
 class CodeEvaluator(BaseTool):
     def __init__(self, config):
         self.config = config
-        vertexai.init(project=self.config.project_id, location=self.config.vertexai_location)
-        self.model = GenerativeModel(self.config.vertexai_model_name)
+        try:
+            vertexai.init(project=self.config.project_id, location=self.config.vertexai_location)
+            self.model = GenerativeModel(self.config.vertexai_model_name)
+        except Exception as e:
+            raise CodeEvaluatorError(f"Error initializing Vertex AI: {e}")
 
     def execute(self, file_path, language):
         """
@@ -18,18 +23,18 @@ class CodeEvaluator(BaseTool):
             with open(file_path, 'r', encoding='utf-8') as file:
                 code = file.read()
         except FileNotFoundError:
-            return json.dumps({"error": f"File not found at path: {file_path}"})
+            raise CodeEvaluatorError(f"File not found at path: {file_path}")
         except Exception as e:
-            return json.dumps({"error": f"Error reading file: {e}"})
+            raise CodeEvaluatorError(f"Error reading file: {e}")
 
         # Read prompt from file
         try:
             with open("./prompts/consolidated_eval.txt", "r") as f:
                 prompt_template = f.read()
         except FileNotFoundError:
-            return json.dumps({"error": "Prompt file not found."})
+            raise CodeEvaluatorError("Prompt file not found.")
         except Exception as e:
-            return json.dumps({"error": f"Error reading prompt file: {e}"})
+            raise CodeEvaluatorError(f"Error reading prompt file: {e}")
 
         # Inject code into prompt
         prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code)
@@ -40,12 +45,14 @@ class CodeEvaluator(BaseTool):
             top_p=0.9,
         )
 
-        response = self.model.generate_content(
-            prompt,
-            generation_config=generation_config
-        )
-
-        return response.candidates[0].content.parts[0].text
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=generation_config
+            )
+            return response.candidates[0].content.parts[0].text
+        except Exception as e:
+            raise CodeEvaluatorError(f"Error generating content from Vertex AI: {e}")
 
     def _fill_prompt_placeholders(self, prompt_template_string: str, language: str, code_sample: str) -> str:
         """

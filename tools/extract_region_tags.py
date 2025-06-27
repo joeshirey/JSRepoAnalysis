@@ -2,6 +2,8 @@
 from .base_tool import BaseTool
 import re
 import sys
+from utils.logger import logger
+from utils.exceptions import RegionTagError
 
 class RegionTagExtractor(BaseTool):
     def execute(self, file_path):
@@ -20,10 +22,8 @@ class RegionTagExtractor(BaseTool):
                         region_tag = match.group(2).strip()
                         region_tags.add(region_tag)
         except FileNotFoundError:
-            print(f"Error: File not found at path: {file_path}")
-            return None
+            raise RegionTagError(f"File not found at path: {file_path}")
         except Exception as e:
-            print(f"Error: An error occurred: {e}")
-            return None
+            raise RegionTagError(f"Error extracting region tags: {e}")
 
         return sorted(list(region_tags))

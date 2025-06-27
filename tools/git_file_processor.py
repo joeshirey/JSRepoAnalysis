@@ -4,6 +4,8 @@ import subprocess
 import json
 import re
 from datetime import datetime
+from utils.logger import logger
+from utils.exceptions import GitProcessorError
 
 class GitFileProcessor(BaseTool):
     def execute(self, file_path):
@@ -40,9 +42,9 @@ class GitFileProcessor(BaseTool):
 
             return git_data
         except subprocess.CalledProcessError as e:
-            return {"error": f"Not a git repository or file not tracked by git: {e}"}
+            raise GitProcessorError(f"Not a git repository or file not tracked by git: {e}")
         except Exception as e:
-            return {"error": str(e)}
+            raise GitProcessorError(str(e))
 
     def _get_github_owner_repo(self, file_path):
         """
@@ -111,5 +113,4 @@ class GitFileProcessor(BaseTool):
                 i += 5
             return commits
         except subprocess.CalledProcessError as e:
-            print(f"Error getting commit history: {e}")
-            return None
+            raise GitProcessorError(f"Error getting commit history: {e}")
