@@ -1,6 +1,9 @@
 from .language_strategy import LanguageStrategy
 import os
 
+from .language_strategy import LanguageStrategy
+import os
+
 def get_strategy(file_path, config):
     """
     Returns the appropriate language strategy based on the file extension.
