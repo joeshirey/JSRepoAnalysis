@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import json
 import os
@@ -9,8 +10,11 @@ from vertexai.generative_models import GenerativeModel
 def load_product_catalog(filename="product_catalog.json"):
     """Loads the product catalog from a JSON file."""
     if not os.path.exists(filename):
-        print(f"Error: Product catalog file '{filename}' not found.")
-        exit(1)
+        # Try to find the file in the root directory
+        filename = os.path.join(os.path.dirname(__file__), '..', filename)
+        if not os.path.exists(filename):
+            print(f"Error: Product catalog file '{filename}' not found.")
+            exit(1)
     with open(filename, 'r') as f:
         return json.load(f)
 

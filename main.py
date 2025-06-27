@@ -1,7 +1,7 @@
 import argparse
 import os
 from config import Config
-from code_processor import CodeProcessor
+from tools.code_processor import CodeProcessor
 from strategies.strategy_factory import get_strategy
 from utils.logger import logger
 
