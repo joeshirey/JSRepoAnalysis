@@ -9,8 +9,8 @@ class LanguageStrategy:
         self.evaluator = CodeEvaluator(config)
         self.language = language
 
-    def evaluate_code(self, file_path):
+    def evaluate_code(self, file_path, region_tag):
         """
         Evaluates the code in the given file.
         """
-        return self.evaluator.execute(file_path, self.language)
+        return self.evaluator.execute(file_path, self.language, region_tag)

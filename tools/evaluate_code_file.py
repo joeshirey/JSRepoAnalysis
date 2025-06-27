@@ -15,7 +15,7 @@ class CodeEvaluator(BaseTool):
         except Exception as e:
             raise CodeEvaluatorError(f"Error initializing Vertex AI: {e}")
 
-    def execute(self, file_path, language):
+    def execute(self, file_path, language, region_tag):
         """
         Evaluates code using the Gemini 2.5 Flash model on Vertex AI.
         """
@@ -37,7 +37,7 @@ class CodeEvaluator(BaseTool):
             raise CodeEvaluatorError(f"Error reading prompt file: {e}")
 
         # Inject code into prompt
-        prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code)
+        prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code, github_link=file_path, region_tag=region_tag)
 
         # Configure generation parameters
         generation_config = GenerationConfig(
@@ -54,7 +54,7 @@ class CodeEvaluator(BaseTool):
         except Exception as e:
             raise CodeEvaluatorError(f"Error generating content from Vertex AI: {e}")
 
-    def _fill_prompt_placeholders(self, prompt_template_string: str, language: str, code_sample: str) -> str:
+    def _fill_prompt_placeholders(self, prompt_template_string: str, language: str, code_sample: str, github_link: str, region_tag: str) -> str:
         """
         Replaces placeholders in an existing prompt template string.
         """
@@ -62,4 +62,6 @@ class CodeEvaluator(BaseTool):
         filled_prompt = prompt_template_string.replace("{{LANGUAGE}}", language)
         filled_prompt = filled_prompt.replace("{{LANGUAGE_LOWERCASE}}", language_lowercase)
         filled_prompt = filled_prompt.replace("{{CODE_SAMPLE}}", code_sample)
+        filled_prompt = filled_prompt.replace("{{uri_placeholder}}", github_link)
+        filled_prompt = filled_prompt.replace("{{region_tag_id_placeholder}}", region_tag)
         return filled_prompt

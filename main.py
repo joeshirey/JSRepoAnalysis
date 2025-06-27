@@ -15,6 +15,9 @@ def main():
     parser.add_argument("--reprocess-log", help="Path to a log file to reprocess.")
     args = parser.parse_args()
 
+    if args.db:
+        settings.FIRESTORE_DB = args.db
+
     if not args.file_link and not args.reprocess_log:
         parser.error("Either file_link or --reprocess-log is required.")
 

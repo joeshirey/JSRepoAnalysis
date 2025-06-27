@@ -52,7 +52,7 @@ class CodeProcessor:
         if not region_tags:
             raise NoRegionTagsError("File not analyzed, no region tags")
 
-        evaluation_data = self._evaluate_code(strategy, file_path)
+        evaluation_data = self._evaluate_code(strategy, file_path, region_tags[0])
         raw_code = self._read_raw_code(file_path)
 
         return AnalysisResult(
@@ -62,8 +62,8 @@ class CodeProcessor:
             raw_code=raw_code
         )
 
-    def _evaluate_code(self, strategy, file_path):
-        style_info = strategy.evaluate_code(file_path)
+    def _evaluate_code(self, strategy, file_path, region_tag):
+        style_info = strategy.evaluate_code(file_path, region_tag)
         if style_info.startswith("```json"):
             cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
         else:
