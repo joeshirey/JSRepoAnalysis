@@ -7,15 +7,15 @@ from tools.firestore import create, read, FirestoreClient
 from strategies.strategy_factory import get_strategy
 
 class CodeProcessor:
-    def __init__(self, db_name=None):
+    def __init__(self, config):
+        self.config = config
         self.firestore_client = FirestoreClient()
-        self.db_name = db_name or os.getenv("FIRESTORE_DB")
-        self.firestore_client.open_connection(db_name=self.db_name)
+        self.firestore_client.open_connection(db_name=self.config.firestore_db)
         self.git_processor = GitFileProcessor()
         self.tag_extractor = RegionTagExtractor()
 
     def process_file(self, file_path, regen=False):
-        strategy = get_strategy(file_path)
+        strategy = get_strategy(file_path, self.config)
         if not strategy:
             print(f"Skipping processing for unsupported file type: {file_path}")
             return {"error": f"Unsupported file type: {file_path}"}

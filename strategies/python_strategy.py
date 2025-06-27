@@ -6,8 +6,8 @@ class PythonStrategy(BaseLanguageStrategy):
     A strategy for handling Python files.
     """
 
-    def __init__(self):
-        self.evaluator = CodeEvaluator()
+    def __init__(self, config):
+        self.evaluator = CodeEvaluator(config)
 
     def get_file_extensions(self):
         return [".py"]

@@ -1,13 +1,13 @@
 from .javascript_strategy import JavascriptStrategy
 from .python_strategy import PythonStrategy
 
-def get_strategy(file_path):
+def get_strategy(file_path, config):
     """
     Returns the appropriate language strategy based on the file extension.
     """
     if file_path.endswith((".js", ".ts")):
-        return JavascriptStrategy()
+        return JavascriptStrategy(config)
     elif file_path.endswith(".py"):
-        return PythonStrategy()
+        return PythonStrategy(config)
     else:
         return None

@@ -5,6 +5,11 @@ import vertexai
 from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
 
 class CodeEvaluator(BaseTool):
+    def __init__(self, config):
+        self.config = config
+        vertexai.init(project=self.config.project_id, location=self.config.vertexai_location)
+        self.model = GenerativeModel(self.config.vertexai_model_name)
+
     def execute(self, file_path, language):
         """
         Evaluates code using the Gemini 2.5 Flash model on Vertex AI.
@@ -29,28 +34,13 @@ class CodeEvaluator(BaseTool):
         # Inject code into prompt
         prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code)
 
-        # Vertex AI configuration
-        PROJECT_ID = os.getenv("PROJECT_ID")
-        LOCATION = os.getenv("VERTEXAI_LOCATION")
-        MODEL_NAME = os.getenv("VERTEXAI_MODEL_NAME")
-
-        if not PROJECT_ID or not LOCATION or not MODEL_NAME:
-            return json.dumps({"error": "Missing Vertex AI environment variables (PROJECT_ID, VERTEXAI_LOCATION, or VERTEXAI_MODEL_NAME)."})
-
-        # Initialize Vertex AI client
-        try:
-            vertexai.init(project=PROJECT_ID, location=LOCATION)
-            model = GenerativeModel(MODEL_NAME)
-        except Exception as e:
-            return json.dumps({"error": f"Error initializing Vertex AI client or model: {e}"})
-
         # Configure generation parameters
         generation_config = GenerationConfig(
             temperature=0.1,
             top_p=0.9,
         )
 
-        response = model.generate_content(
+        response = self.model.generate_content(
             prompt,
             generation_config=generation_config
         )
