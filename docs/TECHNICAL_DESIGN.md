@@ -10,8 +10,8 @@ The system is a monolithic Python application designed to be run from the comman
 
 ### Core Components
 
-*   **`main.py`**: The main entry point and orchestrator of the application. It handles command-line argument parsing (`argparse`), file system traversal (`os.walk`), and calls the `CodeProcessor`.
-*   **`tools/code_processor.py`**: The `CodeProcessor` class is the core of the application, responsible for orchestrating the analysis of a single file. It is composed of smaller, more focused components.
+*   **`main.py`**: The main entry point and orchestrator of the application. It handles command-line argument parsing (`argparse`), file system traversal (`os.walk`), and calls the `CodeProcessor`. It also includes a special `--eval_only` mode for quickly analyzing a single file without database interaction.
+*   **`tools/code_processor.py`**: The `CodeProcessor` class is the core of the application, responsible for orchestrating the analysis of a single file. It is composed of smaller, more focused components and supports lazy initialization of the Firestore repository.
 *   **`strategies/`**: This directory contains the language-specific logic.
     *   **`strategy_factory.py`**: A factory function that returns a `LanguageStrategy` instance based on the file extension.
     *   **`language_strategy.py`**: A single, generic strategy class that is initialized with the language name and uses the `CodeEvaluator` to perform the analysis.

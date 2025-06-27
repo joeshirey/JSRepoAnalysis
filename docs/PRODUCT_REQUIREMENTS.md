@@ -33,6 +33,7 @@ The Code Quality Analyzer is a command-line tool designed to analyze a local cod
 | FR-7 | **Incremental Processing** | The tool MUST check if a file has been analyzed before and if its content has changed (based on the last Git commit date). It should skip analysis if the file is unchanged. |
 | FR-8 | **Forced Regeneration** | The tool MUST provide a command-line flag (`--regen`) to force re-analysis of a file, even if it has not changed. |
 | FR-9 | **Error Logging** | The tool MUST log any errors that occur during file processing to a dynamically named log file in the `logs/` directory. |
+| FR-11 | **Evaluation-Only Mode** | The tool MUST provide a command-line flag (`--eval_only`) to analyze a single file and print the results to the console without any database interaction. |
 | FR-10 | **Reprocessing** | The tool MUST provide a command-line flag (`--reprocess-log`) to reprocess files from a specified error log. |
 
 ## 5. Out of Scope (Non-Goals)

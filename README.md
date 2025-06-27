@@ -66,6 +66,7 @@ python main.py /path/to/your/directory/
 *   `--regen`: Forces the tool to re-analyze files that have already been processed and stored in Firestore.
 *   `--db <database_name>`: Overrides the `FIRESTORE_DB` environment variable.
 *   `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
+*   `--eval_only`: Only evaluate a single file and print the result to the console.
 
 ### Reprocessing Errored Files
 

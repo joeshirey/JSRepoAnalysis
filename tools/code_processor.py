@@ -17,6 +17,7 @@ class CodeProcessor:
         self.git_processor = GitFileProcessor()
         self.tag_extractor = RegionTagExtractor()
 
+    # Lazily initialize the Firestore repository to avoid connecting when not needed (e.g., --eval_only).
     @property
     def firestore_repo(self):
         if self._firestore_repo is None:
@@ -91,6 +92,9 @@ class CodeProcessor:
             self._firestore_repo.close()
 
     def analyze_file_only(self, file_path):
+        """
+        Analyzes a single file without any database interaction.
+        """
         strategy = get_strategy(file_path, self.settings)
         if not strategy:
             raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")

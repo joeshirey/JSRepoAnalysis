@@ -39,7 +39,7 @@ class CodeEvaluator(BaseTool):
         # Inject code into prompt
         prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code, github_link=file_path, region_tag=region_tag)
 
-        # Configure generation parameters
+        # Configure generation parameters for consistent output.
         generation_config = GenerationConfig(
             temperature=0.0,
             top_p=0.9,

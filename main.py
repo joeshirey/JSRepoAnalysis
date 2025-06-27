@@ -17,6 +17,7 @@ def main():
     parser.add_argument("--eval_only", action="store_true", help="Only evaluate a single file and print the result.")
     args = parser.parse_args()
 
+    # If in evaluation-only mode, process a single file and exit.
     if args.eval_only:
         if not args.file_link or not os.path.isfile(args.file_link):
             parser.error("--eval_only requires a single file path.")
@@ -29,12 +30,14 @@ def main():
             logger.error(f"Error during evaluation: {e}")
         return
 
+    # Override the Firestore database name if provided on the command line.
     if args.db:
         settings.FIRESTORE_DB = args.db
 
     if not args.file_link and not args.reprocess_log:
         parser.error("Either file_link or --reprocess-log is required.")
 
+    # Create a dynamic log file name based on the run parameters.
     log_filename_parts = ["errors", datetime.now().strftime("%Y-%m-%d")]
     if args.regen:
         log_filename_parts.append("regen")
@@ -48,6 +51,7 @@ def main():
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
     logger.addHandler(file_handler)
 
+    # Gather the list of files to process from the specified source.
     files_to_process = []
     if args.reprocess_log:
         try:
@@ -70,6 +74,7 @@ def main():
         logger.info("No files to process.")
         return
 
+    # Process all files in a single session to avoid repeated connections.
     processor = CodeProcessor(settings)
     try:
         for file_path in files_to_process:
