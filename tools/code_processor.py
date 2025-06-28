@@ -90,6 +90,7 @@ class CodeProcessor:
     def close(self):
         if self._firestore_repo:
             self._firestore_repo.close()
+            self._firestore_repo = None
 
     def analyze_file_only(self, file_path):
         """

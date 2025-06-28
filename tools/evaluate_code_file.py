@@ -64,6 +64,6 @@ class CodeEvaluator(BaseTool):
         prompt = f"**LANGUAGE:**\n{language}\n\n"
         prompt += f"**URI:**\n{github_link}\n\n"
         prompt += f"**Region Tag ID:**\n{region_tag}\n\n"
-        prompt += f"**CODE_SAMPLE:**\n```{language_lowercase}\n{code_sample}\n```"
+        prompt += f"**CODE_SAMPLE:**\n```{language_lowercase}\n{json.dumps(code_sample)}\n```"
         return prompt
 

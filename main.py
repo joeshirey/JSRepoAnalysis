@@ -3,11 +3,22 @@ import os
 import logging
 import json
 from datetime import datetime
+import concurrent.futures
 from config import settings
 from tools.code_processor import CodeProcessor
 from strategies.strategy_factory import get_strategy
 from utils.logger import logger
 from utils.exceptions import NoRegionTagsError
+
+def process_file_wrapper(processor, file_path, regen, error_logger, error_log_path, total_files, i):
+    try:
+        logger.info(f"Processing file {i+1}/{total_files}: {file_path}")
+        processor.process_file(file_path, regen=regen)
+    except NoRegionTagsError as e:
+        logger.info(f"Skipping file {file_path}: {e}")
+    except Exception as e:
+        logger.error(f"Error processing file {file_path}: {e}")
+        error_logger.error(file_path)
 
 def main():
     parser = argparse.ArgumentParser(description="Process a code file or directory.")
@@ -16,6 +27,7 @@ def main():
     parser.add_argument("--db", help="Firestore database name (overrides environment variable).")
     parser.add_argument("--reprocess-log", help="Path to a log file to reprocess.")
     parser.add_argument("--eval_only", action="store_true", help="Only evaluate a single file and print the result.")
+    parser.add_argument("--max-workers", type=int, default=5, help="Maximum number of concurrent threads.")
     args = parser.parse_args()
 
     # If in evaluation-only mode, process a single file and exit.
@@ -81,15 +93,9 @@ def main():
     processor = CodeProcessor(settings)
     total_files = len(files_to_process)
     try:
-        for i, file_path in enumerate(files_to_process):
-            try:
-                logger.info(f"Processing file {i+1}/{total_files}: {file_path}")
-                processor.process_file(file_path, regen=args.regen)
-            except NoRegionTagsError as e:
-                logger.info(f"Skipping file {file_path}: {e}")
-            except Exception as e:
-                logger.error(f"Error processing file {file_path}: {e}")
-                error_logger.error(file_path)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=args.max_workers) as executor:
+            futures = [executor.submit(process_file_wrapper, processor, file_path, args.regen, error_logger, error_log_path, total_files, i) for i, file_path in enumerate(files_to_process)]
+            concurrent.futures.wait(futures)
     finally:
         processor.close()
 
@@ -97,7 +103,8 @@ def main():
         archive_path = os.path.join("logs", "archive", os.path.basename(args.reprocess_log))
         os.rename(args.reprocess_log, archive_path)
         logger.info(f"Archived log file to {archive_path}")
-    elif os.path.exists(error_log_path) and os.path.getsize(error_log_path) == 0:
+    
+    if os.path.exists(error_log_path) and os.path.getsize(error_log_path) == 0:
         os.remove(error_log_path)
         logger.info("No errors, removing empty log file.")
 
