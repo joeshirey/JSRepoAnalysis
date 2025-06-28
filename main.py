@@ -7,6 +7,7 @@ from config import settings
 from tools.code_processor import CodeProcessor
 from strategies.strategy_factory import get_strategy
 from utils.logger import logger
+from utils.exceptions import NoRegionTagsError
 
 def main():
     parser = argparse.ArgumentParser(description="Process a code file or directory.")
@@ -82,6 +83,8 @@ def main():
             try:
                 logger.info(f"Processing file: {file_path}")
                 processor.process_file(file_path, regen=args.regen)
+            except NoRegionTagsError as e:
+                logger.info(f"Skipping file {file_path}: {e}")
             except Exception as e:
                 logger.error(f"Error processing file {file_path}: {e}")
                 with open(error_log_path, 'a') as f:
