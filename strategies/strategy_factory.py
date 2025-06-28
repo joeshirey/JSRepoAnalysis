@@ -10,7 +10,7 @@ def get_strategy(file_path, config):
     """
     extension_to_language = {
         ".js": "Javascript",
-        ".ts": "Typescript",
+        ".ts": "Javascript",
         ".py": "Python",
         ".java": "Java",
         ".go": "Go",
