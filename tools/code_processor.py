@@ -72,7 +72,6 @@ class CodeProcessor:
 
     def _evaluate_code(self, strategy, file_path, region_tag, github_link):
         style_info = strategy.evaluate_code(file_path, region_tag, github_link)
-        logger.info(f"Style info received: {style_info}")
         
         # Use a regex to extract the JSON object from the response
         match = re.search(r"```json\s*({.*})\s*```", style_info, re.DOTALL)
@@ -82,8 +81,6 @@ class CodeProcessor:
             # Fallback for cases where the JSON is not in a code block
             cleaned_text = style_info.strip()
 
-        logger.info(f"Cleaned text: {cleaned_text}")
-        
         try:
             return json.loads(cleaned_text)
         except json.JSONDecodeError as e:
