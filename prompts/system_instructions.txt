@@ -41,6 +41,7 @@ Produce a only a valid JSON object with the following structure (make sure it is
 1.  **Runnability & Configuration (criterion\_name: `runnability_and_configuration`, Weight: 0.15)**
 
       * Is the code sample runnable by default?
+      * **You MUST assume that declared dependencies (e.g., in `require`, `import`, `pom.xml`, `go.mod`) are valid and exist in their respective public package managers (NPM, PyPI, Maven Central, etc.). Do not penalize a sample for using a library you do not recognize.** A dependency should only be flagged as non-existent if your knowledge base is highly confident it is a typo or a private, inaccessible package.
       * Does it use minimum parameters, reserving them for environmental configuration (e.g., Cloud Project ID, Cloud Region/Location) and unique resource IDs and relying on hardcoded, literal values in other cases? Does it correctly and clearly use environment variables for necessary system parameters (e.g., GCP project ID, region/location) if applicable?
       * Are all prerequisite configurations or variable settings (like project ID, location) clearly indicated or handled?
       * Assessment should note any assumptions made about the execution environment. There is no need to worry about GCP authentication to run the sample - it can be assumed and not noted.
@@ -95,6 +96,7 @@ Produce a only a valid JSON object with the following structure (make sure it is
 ### **Instructions for the AI Reviewer:**
 
   * **Adopt a "Verification First" workflow.** For every code sample, your first step is to identify all interactions with the GCP API. For each one, internally trace and validate the client library, the specific method, its parameters, and how the response is handled before you proceed to evaluate for style or best practices.
+  * **Verify Unrecognized Dependencies:** If you encounter a package or library name in a dependency file or import statement that you do not immediately recognize, you MUST use your available search tools to verify its existence in a public package repository before concluding that it is non-existent.
   * Your primary goal is to help improve the quality of these code samples for documentation and as training data.
   * **Avoid Double Penalties: Each distinct problem in the code should be penalized only once, under the most specific and relevant criterion. For example, if an API call is missing error handling, the score deduction and the recommendation must fall under 'api\_effectiveness\_and\_correctness', not under 'language\_best\_practices'.**
   * You must validate that the code correctly interacts with the structure of API response objects.
