@@ -182,3 +182,4 @@ node_modules/
 >>>>>>> 58b4abdb7265205e643208a3a4d54f39d1f06d7c
 logs/
 errors.log
+.DS_Store
