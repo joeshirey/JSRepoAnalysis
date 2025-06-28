@@ -9,8 +9,8 @@ def get_strategy(file_path, config):
     Returns the appropriate language strategy based on the file extension.
     """
     extension_to_language = {
-        ".js": "JavaScript",
-        ".ts": "TypeScript",
+        ".js": "Javascript",
+        ".ts": "Typescript",
         ".py": "Python",
         ".java": "Java",
         ".go": "Go",

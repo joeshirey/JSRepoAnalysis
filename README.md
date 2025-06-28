@@ -1,6 +1,6 @@
 # Code Quality Analyzer
 
-This tool analyzes a local codebase of JavaScript, TypeScript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files, performs an AI-powered quality evaluation, and stores the results in a Firestore database.
+This tool analyzes a local codebase of Javascript, Typescript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files, performs an AI-powered quality evaluation, and stores the results in a Firestore database.
 
 ## Documentation
 
