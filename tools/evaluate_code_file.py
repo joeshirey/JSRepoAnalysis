@@ -52,9 +52,30 @@ class CodeEvaluator(BaseTool):
                 prompt,
                 generation_config=generation_config
             )
-            return response.candidates[0].content.parts[0].text
+            analysis_text = response.candidates[0].content.parts[0].text
         except Exception as e:
             raise CodeEvaluatorError(f"Error generating content from Vertex AI: {e}")
+
+        # Convert the analysis text to JSON
+        try:
+            with open("./prompts/json_conversion.txt", "r") as f:
+                json_prompt_template = f.read()
+        except FileNotFoundError:
+            raise CodeEvaluatorError("JSON conversion prompt file not found.")
+        except Exception as e:
+            raise CodeEvaluatorError(f"Error reading JSON conversion prompt file: {e}")
+
+        json_prompt = json_prompt_template.replace("{{text}}", analysis_text)
+
+        try:
+            response = self.model.generate_content(
+                json_prompt,
+                generation_config=generation_config
+            )
+            return response.candidates[0].content.parts[0].text
+        except Exception as e:
+            raise CodeEvaluatorError(f"Error converting analysis to JSON: {e}")
+
 
     def _fill_prompt_placeholders(self, prompt_template_string: str, language: str, code_sample: str, github_link: str, region_tag: str) -> str:
         """

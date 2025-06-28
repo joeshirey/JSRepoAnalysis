@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import demjson3
 from datetime import datetime
 from tools.git_file_processor import GitFileProcessor
 from tools.extract_region_tags import RegionTagExtractor
@@ -81,12 +82,19 @@ class CodeProcessor:
             # Fallback for cases where the JSON is not in a code block
             cleaned_text = style_info.strip()
 
+        # Remove trailing commas from arrays and objects that cause JSON errors
+        cleaned_text = re.sub(r",\s*([\]}])", r"\1", cleaned_text)
+        
         try:
             return json.loads(cleaned_text)
         except json.JSONDecodeError as e:
-            logger.error(f"JSON parsing failed: {e}")
-            logger.error(f"Malformed JSON text: {cleaned_text}")
-            raise e
+            logger.warning(f"Initial JSON parsing failed: {e}. Attempting to fix with lenient parser.")
+            try:
+                return demjson3.decode(cleaned_text)
+            except demjson3.JSONDecodeError as e2:
+                logger.error(f"JSON parsing failed even with lenient parser: {e2}")
+                logger.error(f"Malformed JSON text: {cleaned_text}")
+                raise e2
 
     def _read_raw_code(self, file_path):
         try:
