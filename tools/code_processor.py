@@ -71,10 +71,16 @@ class CodeProcessor:
 
     def _evaluate_code(self, strategy, file_path, region_tag, github_link):
         style_info = strategy.evaluate_code(file_path, region_tag, github_link)
+        logger.info(f"Style info received: {style_info}")
         if style_info.startswith("```json"):
             cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
         else:
             cleaned_text = style_info.strip().strip("`").strip()
+        logger.info(f"Cleaned text: {cleaned_text}")
+        
+        # Replace single backslashes with double backslashes to escape them for JSON
+        cleaned_text = cleaned_text.replace("\\", "\\\\")
+        
         return json.loads(cleaned_text)
 
     def _read_raw_code(self, file_path):
@@ -90,7 +96,6 @@ class CodeProcessor:
     def close(self):
         if self._firestore_repo:
             self._firestore_repo.close()
-            self._firestore_repo = None
 
     def analyze_file_only(self, file_path):
         """
