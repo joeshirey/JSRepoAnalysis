@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime
 from tools.git_file_processor import GitFileProcessor
 from tools.extract_region_tags import RegionTagExtractor
@@ -72,16 +73,23 @@ class CodeProcessor:
     def _evaluate_code(self, strategy, file_path, region_tag, github_link):
         style_info = strategy.evaluate_code(file_path, region_tag, github_link)
         logger.info(f"Style info received: {style_info}")
-        if style_info.startswith("```json"):
-            cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
+        
+        # Use a regex to extract the JSON object from the response
+        match = re.search(r"```json\s*({.*})\s*```", style_info, re.DOTALL)
+        if match:
+            cleaned_text = match.group(1)
         else:
-            cleaned_text = style_info.strip().strip("`").strip()
+            # Fallback for cases where the JSON is not in a code block
+            cleaned_text = style_info.strip()
+
         logger.info(f"Cleaned text: {cleaned_text}")
         
-        # Replace single backslashes with double backslashes to escape them for JSON
-        cleaned_text = cleaned_text.replace("\\", "\\\\")
-        
-        return json.loads(cleaned_text)
+        try:
+            return json.loads(cleaned_text)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing failed: {e}")
+            logger.error(f"Malformed JSON text: {cleaned_text}")
+            raise e
 
     def _read_raw_code(self, file_path):
         try:

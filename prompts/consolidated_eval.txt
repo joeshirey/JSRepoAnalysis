@@ -1,7 +1,3 @@
-Your task is to be an expert code reviewer. Analyze the provided code sample and provide a detailed, objective, and constructive review of its quality.
-
-Your final answer MUST be only the raw JSON object, with no other conversational text, explanations, or markdown formatting.
-
 **LANGUAGE:**
 {{language}}
 
