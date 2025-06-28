@@ -98,15 +98,16 @@ def main():
         os.makedirs(os.path.dirname(archive_path), exist_ok=True)
         os.rename(args.reprocess_log, archive_path)
         logger.info(f"Archived log file to {archive_path}")
-    elif os.path.exists(error_log_path) and os.path.getsize(error_log_path) > 0:
+    
+    if os.path.exists(error_log_path) and os.path.getsize(error_log_path) == 0:
+        os.remove(error_log_path)
+        logger.info("No errors, removing empty log file.")
+    elif os.path.exists(error_log_path):
         logger.info(f"Errors were encountered. See {error_log_path} for details.")
         reprocess = input("Would you like to reprocess the failed files? (y/n): ")
         if reprocess.lower() == 'y':
             print(f"\nTo reprocess, run the following command:")
             print(f"python main.py --reprocess-log {error_log_path}")
-    elif os.path.exists(error_log_path) and os.path.getsize(error_log_path) == 0:
-        os.remove(error_log_path)
-        logger.info("No errors, removing empty log file.")
 
 if __name__ == "__main__":
     main()
