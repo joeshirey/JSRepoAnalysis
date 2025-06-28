@@ -1,153 +1,72 @@
 import os
-from dotenv import load_dotenv
 from google.cloud import firestore
 from typing import Dict, Any, Optional
+from utils.logger import logger
+from utils.exceptions import FirestoreError
 
-# Load environment variables from .env file
-load_dotenv()
+class FirestoreRepository:
+    def __init__(self, config):
+        self.config = config
+        try:
+            self._db = firestore.Client(project=self.config.FIRESTORE_PROJECT_ID, database=self.config.FIRESTORE_DB)
+            logger.info("Firestore connection opened.")
+        except Exception as e:
+            raise FirestoreError(f"Error initializing Firestore client: {e}")
 
-class FirestoreClient:
-    _instance = None
-    _db: Optional[firestore.Client] = None
+    def create(self, collection_name: str, document_id: str, document_payload: Dict[str, Any]):
+        """
+        Writes a document to a Firestore collection.
+        """
+        try:
+            doc_ref = self._db.collection(collection_name).document(document_id)
+            doc_ref.set(document_payload)
+            logger.info(f"Successfully wrote document '{document_id}' to project '{self.config.FIRESTORE_PROJECT_ID}', database '{self.config.FIRESTORE_DB}', collection '{collection_name}'.")
+        except Exception as e:
+            raise FirestoreError(f"Error writing document to Firestore: {e}")
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(FirestoreClient, cls).__new__(cls)
-        return cls._instance
+    def read(self, collection_name: str, document_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Reads a document from a Firestore collection.
+        """
+        try:
+            doc_ref = self._db.collection(collection_name).document(document_id)
+            doc = doc_ref.get()
+            if doc.exists:
+                logger.info(f"Document '{document_id}' successfully read from collection '{collection_name}'.")
+                return doc.to_dict()
+            else:
+                logger.info(f"Document '{document_id}' does not exist in collection '{collection_name}'.")
+                return None
+        except Exception as e:
+            raise FirestoreError(f"Error reading document from Firestore: {e}")
 
-    def open_connection(self, db_name: str = None):
-        if self._db is None:
-            project_id = os.getenv("FIRESTORE_PROJECT_ID")
-            credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-            firestore_db_name = os.getenv("FIRESTORE_DB")
+    def read_all_in_collection(self, collection_name: str) -> list[Dict[str, Any]]:
+        """
+        Reads all documents from a Firestore collection.
+        """
+        documents_data = []
+        try:
+            docs = self._db.collection(collection_name).stream()
+            for doc in docs:
+                doc_data = doc.to_dict()
+                doc_data['id'] = doc.id
+                documents_data.append(doc_data)
+            logger.info(f"Successfully read {len(documents_data)} documents from collection '{collection_name}'.")
+            return documents_data
+        except Exception as e:
+            raise FirestoreError(f"Error reading all documents from collection '{collection_name}': {e}")
 
-            if db_name:
-                firestore_db_name = db_name
+    def delete(self, collection_name: str, document_id: str):
+        """
+        Deletes a document from a Firestore collection.
+        """
+        try:
+            self._db.collection(collection_name).document(document_id).delete()
+            logger.info(f"Document '{document_id}' successfully deleted from collection '{collection_name}'.")
+        except Exception as e:
+            raise FirestoreError(f"Error deleting document from Firestore: {e}")
 
-            if not project_id:
-                print("Error: FIRESTORE_PROJECT_ID environment variable not set.")
-                return
-
-            try:
-                if credentials_path and os.path.exists(credentials_path):
-                    self._db = firestore.Client(project=project_id, database=firestore_db_name)
-                else:
-                    self._db = firestore.Client(project=project_id, database=firestore_db_name)
-                print("Firestore connection opened.")
-            except Exception as e:
-                print(f"Error initializing Firestore client: {e}")
-                self._db = None
-
-    def close_connection(self):
-        if self._db:
-            # Firestore client doesn't have an explicit close method,
-            # but setting it to None allows for re-initialization if needed.
-            self._db = None
-            print("Firestore connection closed (client released).")
-
-    def get_db(self) -> Optional[firestore.Client]:
-        if self._db is None:
-            print("Warning: Firestore connection not open. Call open_connection() first.")
-        return self._db
-
-def create(collection_name: str, document_id: str, document_payload: Dict[str, Any]):
-    """
-    Writes a document to a Firestore collection.
-
-    Args:
-        collection_name: The name of the Firestore collection.
-        document_id: The ID of the document to create.
-        document_payload: The data to write to the document.
-    """
-    db = FirestoreClient().get_db()
-    if not db:
-        print("Error: Firestore client not available for create operation.")
-        return
-
-    try:
-        doc_ref = db.collection(collection_name).document(document_id)
-        doc_ref.set(document_payload)
-        print(f"Document '{document_id}' successfully written to collection '{collection_name}'.")
-    except Exception as e:
-        print(f"Error writing document to Firestore: {e}")
-
-def read(collection_name: str, document_id: str) -> Dict[str, Any] | None:
-    """
-    Reads a document from a Firestore collection.
-
-    Args:
-        collection_name: The name of the Firestore collection.
-        document_id: The ID of the document to read.
-
-    Returns:
-        The document data as a dictionary if found, otherwise None.
-    """
-    db = FirestoreClient().get_db()
-    if not db:
-        print("Error: Firestore client not available for read operation.")
-        return None
-
-    try:
-        doc_ref = db.collection(collection_name).document(document_id)
-        doc = doc_ref.get()
-        if doc.exists:
-            print(f"Document '{document_id}' successfully read from collection '{collection_name}'.")
-            return doc.to_dict()
-        else:
-            print(f"Document '{document_id}' does not exist in collection '{collection_name}'.")
-            return None
-    except Exception as e:
-        print(f"Error reading document from Firestore: {e}")
-        return None
-
-def read_all_in_collection(collection_name: str) -> list[Dict[str, Any]]:
-    """
-    Reads all documents from a Firestore collection.
-
-    Args:
-        collection_name: The name of the Firestore collection.
-
-    Returns:
-        A list of dictionaries, where each dictionary represents a document
-        with its ID and data. Returns an empty list if no documents are found
-        or an error occurs.
-    """
-    db = FirestoreClient().get_db()
-    if not db:
-        print("Error: Firestore client not available for read_all_in_collection operation.")
-        return []
-
-    documents_data = []
-    try:
-        docs = db.collection(collection_name).stream()
-        for doc in docs:
-            doc_data = doc.to_dict()
-            doc_data['id'] = doc.id  # Include the document ID
-            documents_data.append(doc_data)
-        print(f"Successfully read {len(documents_data)} documents from collection '{collection_name}'.")
-        return documents_data
-    except Exception as e:
-        print(f"Error reading all documents from collection '{collection_name}': {e}")
-        return []
-
-def delete(collection_name: str):
-    """
-    Deletes a document from a Firestore collection.
-
-    Args:
-        collection_name: The name of the Firestore collection.
-        document_id: The ID of the document to delete.
-    """
-    db = FirestoreClient().get_db()
-    if not db:
-        print("Error: Firestore client not available for delete operation.")
-        return
-
-    try:
-        db.collection(collection_name).document(document_id).delete()
-        print(f"Document '{document_id}' successfully deleted from collection '{collection_name}'.")
-    except Exception as e:
-        print(f"Error deleting document from Firestore: {e}")
-
-if __name__ == '__main__':
-    pass
+    def close(self):
+        # Firestore client doesn't have an explicit close method.
+        # This is here for conceptual clarity.
+        logger.info("Firestore connection conceptually closed.")

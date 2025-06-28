@@ -1,145 +1,112 @@
 import argparse
-import json
-import subprocess
 import os
+import logging
+import json
 from datetime import datetime
-from tools.git_file_processor import get_git_data
-#from tools.evaluate_js_code_file import evaluate_code as evaluate_js_code
-#from tools.evaluate_py_code_file import evaluate_code as evaluate_py_code
-from tools.evaluate_code_file import evaluate_code
-from tools.extract_region_tags import extract_region_tags
-from tools.firestore import create, read, FirestoreClient
-from dotenv import load_dotenv
+from config import settings
+from tools.code_processor import CodeProcessor
+from strategies.strategy_factory import get_strategy
+from utils.logger import logger
+from utils.exceptions import NoRegionTagsError
 
+def main():
+    parser = argparse.ArgumentParser(description="Process a code file or directory.")
+    parser.add_argument("file_link", nargs='?', default=None, help="Path to the code file or directory.")
+    parser.add_argument("--regen", action="store_true", help="Overwrite existing Firestore entry if true.")
+    parser.add_argument("--db", help="Firestore database name (overrides environment variable).")
+    parser.add_argument("--reprocess-log", help="Path to a log file to reprocess.")
+    parser.add_argument("--eval_only", action="store_true", help="Only evaluate a single file and print the result.")
+    args = parser.parse_args()
 
-
-
-def process_file(file_link, regen=False, db_name=None):
-    #try:
-    # Call git_file_processor.py
-    
-    git_info = get_git_data(file_link)
-    #print(git_info)
-
-    # Determine language for collection name
-    language = None
-    if file_link.endswith(('.js', '.ts')):
-        language = "Javascript"
-    elif file_link.endswith('.py'):
-        language = "Python"
-
-    if not language:
-        print(f"Skipping processing for unsupported file type: {file_link}")
-        return {"error": f"Unsupported file type: {file_link}"}
-
-    print(git_info["github_link"])
-
-    if "github_link" in git_info :
-        github_link = git_info["github_link"]
-        document_id = github_link.replace("/", "_").replace(".", "_").replace(":", "_").replace("-", "_")
-
-        if not regen:
-            existing_doc = read(language, document_id)
-            if existing_doc:
-                last_updated_date_in_db = existing_doc['git_info']['last_updated']
-                last_update_date_in_gh = git_info['last_updated']
-                if last_updated_date_in_db == last_update_date_in_gh:
-                    print(f"{file_link} already processed, skipping.")
-                    return existing_doc # Return existing data if found and not regenerating
-    else:
-        print(f"Skipping processing for file not in git repository: {file_link}")
-        return {"error": f"File not in git repository: {file_link}"}
-
-    js_info = extract_region_tags(file_link)
-    #print(js_info)
-
-    try:
-        if not js_info:
-            cleaned_text = '["File not analyzed, no region tags"]'
-        else:
-            style_info = None
-            if file_link.endswith(('.js', '.ts')):
-                style_info = evaluate_code(file_link, "Javascript")
-            elif file_link.endswith('.py'):
-                style_info = evaluate_code(file_link, "Python")
-            else:
-                return {"error": f"Unsupported file type for evaluation: {file_link}"}
-            if style_info.startswith("```json"):
-                cleaned_text = style_info.removeprefix("```json").removesuffix("```").strip()
-            else:
-                # Fallback for cases where it might just be wrapped in ```
-                cleaned_text = style_info.strip().strip("`").strip()
-
-        # Read the content of the file
+    # If in evaluation-only mode, process a single file and exit.
+    if args.eval_only:
+        if not args.file_link or not os.path.isfile(args.file_link):
+            parser.error("--eval_only requires a single file path.")
+        
+        processor = CodeProcessor(settings)
         try:
-            with open(file_link, 'r') as f:
-                raw_code = f.read()
+            result = processor.analyze_file_only(args.file_link)
+            if result:
+                print(json.dumps(result, indent=4))
         except Exception as e:
-            raw_code = f"Error reading file: {e}"
+            logger.error(f"Error during evaluation: {e}")
+        return
+
+    # Override the Firestore database name if provided on the command line.
+    if args.db:
+        settings.FIRESTORE_DB = args.db
+
+    if not args.file_link and not args.reprocess_log:
+        parser.error("Either file_link or --reprocess-log is required.")
+
+    # Create a dynamic log file name based on the run parameters.
+    log_filename_parts = ["errors", datetime.now().strftime("%Y-%m-%d_%H-%M-%S")]
+    if args.regen:
+        log_filename_parts.append("regen")
+    if args.db:
+        log_filename_parts.append(args.db)
+    log_filename = "_".join(log_filename_parts) + ".log"
     
-        result = {
-            "git_info": git_info,
-            "region_tags": js_info,
-            "evaluation_data": json.loads(cleaned_text),
-            "raw_code": raw_code,
-            "evaluation_date": datetime.now().strftime("%Y-%m-%d %H:%M")
-        }
-        create(language, document_id, result)
+    error_log_path = os.path.join("logs", log_filename)
+    error_logger = logging.getLogger('error_logger')
+    error_logger.setLevel(logging.ERROR)
+    error_handler = logging.FileHandler(error_log_path)
+    error_handler.setFormatter(logging.Formatter('%(message)s'))
+    error_logger.addHandler(error_handler)
 
-    except Exception as e:
-        error_message = f"Error processing file: {e}"
-        absolute_path = os.path.abspath(file_link)
-        with open("errors.log", "a") as error_file:
-            error_file.write(f"{absolute_path}\t{error_message}\n")
-        return {"error": error_message}
+    # Gather the list of files to process from the specified source.
+    files_to_process = []
+    if args.reprocess_log:
+        try:
+            with open(args.reprocess_log, 'r') as f:
+                files_to_process = [line.strip() for line in f if line.strip()]
+            logger.info(f"Reprocessing {len(files_to_process)} files from {args.reprocess_log}")
+        except FileNotFoundError:
+            logger.error(f"Error: Log file not found at {args.reprocess_log}")
+            return
+    elif os.path.isfile(args.file_link):
+        files_to_process.append(args.file_link)
+    elif os.path.isdir(args.file_link):
+        for root, _, files in os.walk(args.file_link):
+            for file in files:
+                file_path = os.path.join(root, file)
+                if get_strategy(file_path, settings):
+                    files_to_process.append(file_path)
 
-    return result
+    if not files_to_process:
+        logger.info("No files to process.")
+        return
 
-    #except subprocess.CalledProcessError as e:
-    #    return {"error": f"Subprocess error: {e.stderr}"}
-    #except Exception as e:
-    #    return {"error": f"Error processing file: {e}"}
-
-
-
-def main(input_path=None, regen_arg=False):
-    load_dotenv(override=True)
-    firestore_client = FirestoreClient()
-    
-
+    # Process all files in a single session to avoid repeated connections.
+    processor = CodeProcessor(settings)
+    total_files = len(files_to_process)
     try:
-        if input_path is None:
-            parser = argparse.ArgumentParser(description="Process a code file or directory.")
-            parser.add_argument("file_link", help="Path to the code file or directory.")
-            parser.add_argument("--regen", action="store_true", help="Overwrite existing Firestore entry if true.")
-            parser.add_argument("--db", nargs='?', const=None, help="Firestore database name (overrides environment variable).")
-            args = parser.parse_args()
-            input_path = args.file_link
-            regen_arg = args.regen
-            db_name = args.db
-
-        if db_name is None:
-            db_name = os.getenv("FIRESTORE_DB")
-        firestore_client.open_connection(db_name=db_name)
-
-        if os.path.isfile(input_path):
-            print(f"Processing file: {input_path}")
-            result = process_file(input_path, regen=regen_arg, db_name=db_name)
-            #print(json.dumps(result, indent=4))
-        elif os.path.isdir(input_path):
-            print(f"Processing directory: {input_path}")
-            for root, dirs, files in os.walk(input_path):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    if file_path.endswith(('.js', '.ts', '.py')):
-                        print(f"Processing file: {file_path}")
-                        result = process_file(file_path, regen=regen_arg, db_name=db_name)
-                        #print(json.dumps(result, indent=4))
-        else:
-            print(f"Error: Invalid path provided: {input_path}")
+        for i, file_path in enumerate(files_to_process):
+            try:
+                logger.info(f"Processing file {i+1}/{total_files}: {file_path}")
+                processor.process_file(file_path, regen=args.regen)
+            except NoRegionTagsError as e:
+                logger.info(f"Skipping file {file_path}: {e}")
+            except Exception as e:
+                logger.error(f"Error processing file {file_path}: {e}")
+                error_logger.error(file_path)
     finally:
-        firestore_client.close_connection()
+        processor.close()
 
+    if args.reprocess_log:
+        archive_path = os.path.join("logs", "archive", os.path.basename(args.reprocess_log))
+        os.makedirs(os.path.dirname(archive_path), exist_ok=True)
+        os.rename(args.reprocess_log, archive_path)
+        logger.info(f"Archived log file to {archive_path}")
+    elif os.path.exists(error_log_path) and os.path.getsize(error_log_path) > 0:
+        logger.info(f"Errors were encountered. See {error_log_path} for details.")
+        reprocess = input("Would you like to reprocess the failed files? (y/n): ")
+        if reprocess.lower() == 'y':
+            print(f"\nTo reprocess, run the following command:")
+            print(f"python main.py --reprocess-log {error_log_path}")
+    elif os.path.exists(error_log_path) and os.path.getsize(error_log_path) == 0:
+        os.remove(error_log_path)
+        logger.info("No errors, removing empty log file.")
 
 if __name__ == "__main__":
     main()

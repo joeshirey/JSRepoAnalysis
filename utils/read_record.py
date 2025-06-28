@@ -1,8 +1,15 @@
+#!/usr/bin/env python3
 import argparse
 import json
-from tools.firestore import read
-from dotenv import load_dotenv
 import os
+import sys
+from dotenv import load_dotenv
+
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from tools.firestore import FirestoreRepository
+from config import Config
 
 def main():
     load_dotenv() # Load environment variables from .env file
@@ -12,7 +19,9 @@ def main():
     parser.add_argument("document_id", help="The ID of the document to read.")
     args = parser.parse_args()
 
-    document = read(args.collection_name, args.document_id)
+    config = Config()
+    firestore_repo = FirestoreRepository(config)
+    document = firestore_repo.read(args.collection_name, args.document_id)
 
     if document:
         print(json.dumps(document, indent=4))

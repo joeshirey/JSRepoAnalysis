@@ -1,8 +1,8 @@
-# Product Requirements Document: JS/Python Codebase Analyzer
+# Product Requirements Document: Code Quality Analyzer
 
 ## 1. Introduction
 
-The JS/Python Codebase Analyzer is a command-line tool designed to analyze a local codebase of JavaScript, TypeScript, and Python files. It gathers metadata, performs an AI-powered style and quality evaluation, and stores the comprehensive results in a structured Firestore database. This enables developers and teams to track code quality, identify areas for improvement, and maintain a consistent standard across their repositories.
+The Code Quality Analyzer is a command-line tool designed to analyze a local codebase of Javascript, Typescript, Python, and other languages. It gathers metadata, performs an AI-powered style and quality evaluation, and stores the comprehensive results in a structured Firestore database. This enables developers and teams to track code quality, identify areas for improvement, and maintain a consistent standard across their repositories.
 
 ## 2. User Personas
 
@@ -18,23 +18,26 @@ The JS/Python Codebase Analyzer is a command-line tool designed to analyze a loc
 *   **Objective 3:** To integrate with Git to fetch metadata about each file, such as its last update time and GitHub URL.
 *   **Objective 4:** To use Firestore as a persistent, queryable database for storing the analysis results.
 *   **Objective 5:** To provide an efficiency mechanism that avoids re-analyzing files that have not changed since their last analysis.
+*   **Objective 6:** To provide a robust mechanism for reprocessing files that failed during a previous run.
 
 ## 4. Functional Requirements
 
 | ID | Requirement |
 |----|-------------|
 | FR-1 | **File Processing** | The tool MUST be able to accept a path to either a single file or a directory as a command-line argument. |
-| FR-2 | **Recursive Analysis** | If a directory is provided, the tool MUST recursively scan all subdirectories and analyze every `.js`, `.ts`, and `.py` file found. |
+| FR-2 | **Recursive Analysis** | If a directory is provided, the tool MUST recursively scan all subdirectories and analyze all supported file types. |
 | FR-3 | **Git Integration** | For each file, the tool MUST gather Git metadata, including the last commit date and a link to the file on GitHub. |
 | FR-4 | **Region Tag Extraction** | The tool MUST be able to identify and extract Google Cloud-style region tags (e.g., `[START ...]`) from the code. |
 | FR-5 | **AI-Powered Evaluation** | The tool MUST use a generative AI model to perform a style and quality evaluation on the content of each file. |
 | FR-6 | **Firestore Storage** | The results of the analysis for each file MUST be stored as a document in a Firestore database. |
 | FR-7 | **Incremental Processing** | The tool MUST check if a file has been analyzed before and if its content has changed (based on the last Git commit date). It should skip analysis if the file is unchanged. |
 | FR-8 | **Forced Regeneration** | The tool MUST provide a command-line flag (`--regen`) to force re-analysis of a file, even if it has not changed. |
+| FR-9 | **Error Logging** | The tool MUST log any errors that occur during file processing to a dynamically named log file in the `logs/` directory. |
+| FR-11 | **Evaluation-Only Mode** | The tool MUST provide a command-line flag (`--eval_only`) to analyze a single file and print the results to the console without any database interaction. |
+| FR-10 | **Reprocessing** | The tool MUST provide a command-line flag (`--reprocess-log`) to reprocess files from a specified error log. |
 
 ## 5. Out of Scope (Non-Goals)
 
 *   **A Graphical User Interface (GUI):** This is a command-line only tool.
 *   **Real-time Analysis:** The tool is designed to be run on demand, not as a real-time linter in an IDE.
-*   **Support for other languages:** The initial version will only support JavaScript, TypeScript, and Python.
 *   **Automated Code Fixing:** The tool provides analysis but does not attempt to automatically fix any issues it finds.
