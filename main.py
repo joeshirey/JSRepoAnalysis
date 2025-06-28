@@ -78,10 +78,11 @@ def main():
 
     # Process all files in a single session to avoid repeated connections.
     processor = CodeProcessor(settings)
+    total_files = len(files_to_process)
     try:
-        for file_path in files_to_process:
+        for i, file_path in enumerate(files_to_process):
             try:
-                logger.info(f"Processing file: {file_path}")
+                logger.info(f"Processing file {i+1}/{total_files}: {file_path}")
                 processor.process_file(file_path, regen=args.regen)
             except NoRegionTagsError as e:
                 logger.info(f"Skipping file {file_path}: {e}")
