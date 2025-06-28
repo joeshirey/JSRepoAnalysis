@@ -40,7 +40,7 @@ def main():
         parser.error("Either file_link or --reprocess-log is required.")
 
     # Create a dynamic log file name based on the run parameters.
-    log_filename_parts = ["errors", datetime.now().strftime("%Y-%m-%d")]
+    log_filename_parts = ["errors", datetime.now().strftime("%Y-%m-%d_%H-%M-%S")]
     if args.regen:
         log_filename_parts.append("regen")
     if args.db:
@@ -48,10 +48,11 @@ def main():
     log_filename = "_".join(log_filename_parts) + ".log"
     
     error_log_path = os.path.join("logs", log_filename)
-    file_handler = logging.FileHandler(error_log_path)
-    file_handler.setLevel(logging.ERROR)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
-    logger.addHandler(file_handler)
+    error_logger = logging.getLogger('error_logger')
+    error_logger.setLevel(logging.ERROR)
+    error_handler = logging.FileHandler(error_log_path)
+    error_handler.setFormatter(logging.Formatter('%(message)s'))
+    error_logger.addHandler(error_handler)
 
     # Gather the list of files to process from the specified source.
     files_to_process = []
@@ -88,10 +89,17 @@ def main():
                 logger.info(f"Skipping file {file_path}: {e}")
             except Exception as e:
                 logger.error(f"Error processing file {file_path}: {e}")
-                with open(error_log_path, 'a') as f:
-                    f.write(f"{file_path}\n")
+                error_logger.error(file_path)
     finally:
         processor.close()
+
+    if args.reprocess_log:
+        archive_path = os.path.join("logs", "archive", os.path.basename(args.reprocess_log))
+        os.rename(args.reprocess_log, archive_path)
+        logger.info(f"Archived log file to {archive_path}")
+    elif os.path.exists(error_log_path) and os.path.getsize(error_log_path) == 0:
+        os.remove(error_log_path)
+        logger.info("No errors, removing empty log file.")
 
 if __name__ == "__main__":
     main()
