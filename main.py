@@ -40,7 +40,8 @@ def main():
         parser.error("Either file_link or --reprocess-log is required.")
 
     # Create a dynamic log file name based on the run parameters.
-    log_filename_parts = ["errors", datetime.now().strftime("%Y-%m-%d_%H-%M-%S")]
+    source = "reprocess" if args.reprocess_log else "dir" if os.path.isdir(args.file_link) else "file"
+    log_filename_parts = [datetime.now().strftime("%Y%m%d-%H%M%S"), source]
     if args.regen:
         log_filename_parts.append("regen")
     if args.db:
