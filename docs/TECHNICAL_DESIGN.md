@@ -25,7 +25,7 @@ The system is a monolithic Python application designed to be run from the comman
     *   **`exceptions.py`**: Defines custom exception classes for the application.
     *   **`data_classes.py`**: Defines the `AnalysisResult` data class, which provides a structured way to store the analysis results.
 *   **`prompts/`**: This directory contains the text files used as templates for the AI evaluation prompts.
-*   **`.env`**: This file is used to store environment variables, which are loaded at runtime using `python-dotenv`.
+*   **`config.py`**: This file uses `pydantic-settings` to load environment variables from the `.env` file into a `Settings` object.
 
 ## 3. Data Flow
 
@@ -45,7 +45,7 @@ The system is a monolithic Python application designed to be run from the comman
 *   **Command-Line Parsing:** `argparse`
 *   **AI/LLM:** Google Gemini, via the `google-cloud-aiplatform` SDK.
 *   **Database:** Google Cloud Firestore
-*   **Configuration:** `python-dotenv` for managing environment variables.
+*   **Configuration:** `pydantic-settings` for managing environment variables.
 *   **Version Control Integration:** `git` (via `subprocess`).
 
 ## 5. Future Considerations

@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-The Code Quality Analyzer is a command-line tool designed to analyze a local codebase of Javascript, Typescript, Python, and other languages. It gathers metadata, performs an AI-powered style and quality evaluation, and stores the comprehensive results in a structured Firestore database. This enables developers and teams to track code quality, identify areas for improvement, and maintain a consistent standard across their repositories.
+The Code Quality Analyzer is a command-line tool designed to analyze a local codebase of Javascript, Typescript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files. It gathers metadata, performs an AI-powered style and quality evaluation, and stores the comprehensive results in a structured Firestore database. This enables developers and teams to track code quality, identify areas for improvement, and maintain a consistent standard across their repositories.
 
 ## 2. User Personas
 

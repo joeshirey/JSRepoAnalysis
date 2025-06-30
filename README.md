@@ -61,12 +61,13 @@ python main.py /path/to/your/file.js
 python main.py /path/to/your/directory/
 ```
 
-### Command-Line Arguments
+### Evaluate a Single File
 
-*   `--regen`: Forces the tool to re-analyze files that have already been processed and stored in Firestore.
-*   `--db <database_name>`: Overrides the `FIRESTORE_DB` environment variable.
-*   `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
-*   `--eval_only`: Only evaluate a single file and print the result to the console.
+To quickly evaluate a single file and print the results to the console without saving them to Firestore, use the `--eval_only` flag:
+
+```sh
+python main.py --eval_only /path/to/your/file.js
+```
 
 ### Reprocessing Errored Files
 
@@ -81,3 +82,19 @@ You can also combine this with other flags, which will be applied to all files i
 ```sh
 python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other-db"
 ```
+
+## Command-Line Arguments
+
+*   `file_link`: (Optional) The path to the code file or directory to analyze.
+*   `--regen`: Forces the tool to re-analyze files that have already been processed and stored in Firestore.
+*   `--db <database_name>`: Overrides the `FIRESTORE_DB` environment variable.
+*   `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
+*   `--eval_only`: Analyzes a single file and prints the results to the console without saving to Firestore.
+
+## Project Structure
+
+*   `docs/`: Contains the Product Requirements and Technical Design documents.
+*   `strategies/`: Contains the language-specific analysis strategies.
+*   `tools/`: Contains the core logic for file processing, Git integration, and AI evaluation.
+*   `utils/`: Contains utility modules for logging, exception handling, and data classes.
+*   `prompts/`: Contains the text files used as templates for the AI evaluation prompts.
