@@ -3,6 +3,7 @@ import os
 import json
 from google import genai
 from google.genai import types
+from google.genai.types import Tool, GoogleSearch
 from utils.logger import logger
 from utils.exceptions import CodeEvaluatorError
 
@@ -40,18 +41,21 @@ class CodeEvaluator(BaseTool):
         # Inject code into prompt
         prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code, github_link=github_link, region_tag=region_tag)
 
-        # Configure generation parameters for consistent output.
-        generation_config = types.GenerateContentConfig(
+        # Configure generation parameters for the first call with grounding.
+        grounding_tool = Tool(google_search=GoogleSearch())
+        grounding_generation_config = types.GenerateContentConfig(
             temperature=0.0,
             top_p=0.9,
             system_instruction=self.system_instructions,
+            tools=[grounding_tool],
         )
 
         try:
+            
             response = self.client.models.generate_content(
                 model=self.config.VERTEXAI_MODEL_NAME,
                 contents=prompt,
-                config=generation_config
+                config=grounding_generation_config,
             )
             analysis_text = response.text
         except Exception as e:
@@ -68,11 +72,18 @@ class CodeEvaluator(BaseTool):
 
         json_prompt = json_prompt_template.replace("{{text}}", analysis_text)
 
+        # Configure generation parameters for the second call without grounding.
+        json_generation_config = types.GenerateContentConfig(
+            temperature=0.0,
+            top_p=0.9,
+            system_instruction=self.system_instructions,
+        )
+
         try:
             response = self.client.models.generate_content(
                 model=self.config.VERTEXAI_MODEL_NAME,
                 contents=json_prompt,
-                config=generation_config
+                config=json_generation_config
             )
             return response.text
         except Exception as e:
