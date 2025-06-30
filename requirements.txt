@@ -1,7 +1,7 @@
 python-dotenv
 google-cloud-secret-manager
 google-api-core
-google-cloud-aiplatform
+google-genai
 google-cloud-firestore
 firebase_admin
 pydantic

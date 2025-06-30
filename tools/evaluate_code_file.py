@@ -1,8 +1,8 @@
 from .base_tool import BaseTool
 import os
 import json
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types
 from utils.logger import logger
 from utils.exceptions import CodeEvaluatorError
 
@@ -10,12 +10,11 @@ class CodeEvaluator(BaseTool):
     def __init__(self, config):
         self.config = config
         try:
-            vertexai.init(project=self.config.FIRESTORE_PROJECT_ID, location=self.config.VERTEXAI_LOCATION)
+            self.client = genai.Client()
             with open("./prompts/system_instructions.txt", "r") as f:
-                system_instructions = f.read()
-            self.model = GenerativeModel(self.config.VERTEXAI_MODEL_NAME, system_instruction=system_instructions)
+                self.system_instructions = f.read()
         except Exception as e:
-            raise CodeEvaluatorError(f"Error initializing Vertex AI: {e}")
+            raise CodeEvaluatorError(f"Error initializing genai.Client: {e}")
 
     def execute(self, file_path, language, region_tag, github_link):
         """
@@ -42,17 +41,19 @@ class CodeEvaluator(BaseTool):
         prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code, github_link=github_link, region_tag=region_tag)
 
         # Configure generation parameters for consistent output.
-        generation_config = GenerationConfig(
+        generation_config = types.GenerateContentConfig(
             temperature=0.0,
             top_p=0.9,
         )
 
         try:
-            response = self.model.generate_content(
-                prompt,
-                generation_config=generation_config
+            full_prompt = f"{self.system_instructions}\n\n{prompt}"
+            response = self.client.models.generate_content(
+                model=self.config.VERTEXAI_MODEL_NAME,
+                contents=full_prompt,
+                config=generation_config
             )
-            analysis_text = response.candidates[0].content.parts[0].text
+            analysis_text = response.text
         except Exception as e:
             raise CodeEvaluatorError(f"Error generating content from Vertex AI: {e}")
 
@@ -68,11 +69,13 @@ class CodeEvaluator(BaseTool):
         json_prompt = json_prompt_template.replace("{{text}}", analysis_text)
 
         try:
-            response = self.model.generate_content(
-                json_prompt,
-                generation_config=generation_config
+            full_json_prompt = f"{self.system_instructions}\n\n{json_prompt}"
+            response = self.client.models.generate_content(
+                model=self.config.VERTEXAI_MODEL_NAME,
+                contents=full_json_prompt,
+                config=generation_config
             )
-            return response.candidates[0].content.parts[0].text
+            return response.text
         except Exception as e:
             raise CodeEvaluatorError(f"Error converting analysis to JSON: {e}")
 
@@ -87,4 +90,3 @@ class CodeEvaluator(BaseTool):
         prompt += f"**Region Tag ID:**\n{region_tag}\n\n"
         prompt += f"**CODE_SAMPLE:**\n```{language_lowercase}\n{json.dumps(code_sample)}\n```"
         return prompt
-
