@@ -12,7 +12,7 @@ class CodeEvaluator(BaseTool):
         try:
             self.client = genai.Client()
             with open("./prompts/system_instructions.txt", "r") as f:
-                self.system_instructions = f.read()
+                self.system_instructions = f.read().splitlines()
         except Exception as e:
             raise CodeEvaluatorError(f"Error initializing genai.Client: {e}")
 
@@ -44,13 +44,13 @@ class CodeEvaluator(BaseTool):
         generation_config = types.GenerateContentConfig(
             temperature=0.0,
             top_p=0.9,
+            system_instruction=self.system_instructions,
         )
 
         try:
-            full_prompt = f"{self.system_instructions}\n\n{prompt}"
             response = self.client.models.generate_content(
                 model=self.config.VERTEXAI_MODEL_NAME,
-                contents=full_prompt,
+                contents=prompt,
                 config=generation_config
             )
             analysis_text = response.text
@@ -69,10 +69,9 @@ class CodeEvaluator(BaseTool):
         json_prompt = json_prompt_template.replace("{{text}}", analysis_text)
 
         try:
-            full_json_prompt = f"{self.system_instructions}\n\n{json_prompt}"
             response = self.client.models.generate_content(
                 model=self.config.VERTEXAI_MODEL_NAME,
-                contents=full_json_prompt,
+                contents=json_prompt,
                 config=generation_config
             )
             return response.text
