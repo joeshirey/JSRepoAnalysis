@@ -4,3 +4,5 @@ google-api-core
 google-cloud-aiplatform
 google-cloud-firestore
 firebase_admin
+pydantic
+demjson3
