@@ -108,7 +108,7 @@ def main():
         reprocess = input("Would you like to reprocess the failed files? (y/n): ")
         if reprocess.lower() == 'y':
             print(f"\nTo reprocess, run the following command:")
-            print(f"python main.py --reprocess-log {error_log_path}")
+            print(f"uv run main.py --reprocess-log {error_log_path} --regen")
 
 if __name__ == "__main__":
     main()
