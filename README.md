@@ -42,10 +42,11 @@ The tool uses a `.env` file to manage configuration.
     cp .env.sample .env
     ```
 2.  Edit the `.env` file and provide values for the following variables:
-    *   `FIRESTORE_PROJECT_ID`: Your Google Cloud Project ID for Firestore.
-    *   `VERTEXAI_LOCATION`: The Google Cloud region for Vertex AI (e.g., `us-central1`).
+    *   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
+    *   `GOOGLE_CLOUD_LOCATION`: The Google Cloud region for Vertex AI (e.g., `us-central1`).
     *   `VERTEXAI_MODEL_NAME`: The name of the Gemini model to use (e.g., `gemini-1.5-flash-001`).
     *   `FIRESTORE_DB`: The name of the Firestore database to use.
+    *   `GOOGLE_GENAI_USE_VERTEXAI`: Set to `True` to use Vertex AI.
 
 ## How to Run
 

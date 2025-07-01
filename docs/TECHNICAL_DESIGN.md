@@ -25,7 +25,7 @@ The system is a monolithic Python application designed to be run from the comman
     *   **`exceptions.py`**: Defines custom exception classes for the application.
     *   **`data_classes.py`**: Defines the `AnalysisResult` data class, which provides a structured way to store the analysis results.
 *   **`prompts/`**: This directory contains the text files used as templates for the AI evaluation prompts.
-*   **`config.py`**: This file uses `pydantic-settings` to load environment variables from the `.env` file into a `Settings` object.
+*   **`config.py`**: This file uses `pydantic-settings` to load environment variables from the `.env` file into a `Settings` object. The key variables are `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VERTEXAI_MODEL_NAME`, and `FIRESTORE_DB`.
 
 ## 3. Data Flow
 

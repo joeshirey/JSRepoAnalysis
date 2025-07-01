@@ -8,7 +8,7 @@ class FirestoreRepository:
     def __init__(self, config):
         self.config = config
         try:
-            self._db = firestore.Client(project=self.config.FIRESTORE_PROJECT_ID, database=self.config.FIRESTORE_DB)
+            self._db = firestore.Client(project=self.config.GOOGLE_CLOUD_PROJECT, database=self.config.FIRESTORE_DB)
             logger.info("Firestore connection opened.")
         except Exception as e:
             raise FirestoreError(f"Error initializing Firestore client: {e}")
