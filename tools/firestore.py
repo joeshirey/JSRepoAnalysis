@@ -20,7 +20,7 @@ class FirestoreRepository:
         try:
             doc_ref = self._db.collection(collection_name).document(document_id)
             doc_ref.set(document_payload)
-            logger.info(f"Successfully wrote document '{document_id}' to project '{self.config.FIRESTORE_PROJECT_ID}', database '{self.config.FIRESTORE_DB}', collection '{collection_name}'.")
+            logger.info(f"Successfully wrote document '{document_id}' to project '{self.config.GOOGLE_CLOUD_PROJECT}', database '{self.config.FIRESTORE_DB}', collection '{collection_name}'.")
         except Exception as e:
             raise FirestoreError(f"Error writing document to Firestore: {e}")
 
