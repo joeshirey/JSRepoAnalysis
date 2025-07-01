@@ -93,6 +93,9 @@ python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other
 
 ## Project Structure
 
+*   `main.py`: The main entry point for the command-line tool.
+*   `config.py`: Manages environment variables and configuration settings.
+*   `setup.py`: The setup script for the project, used for packaging and distribution.
 *   `docs/`: Contains the Product Requirements and Technical Design documents.
 *   `strategies/`: Contains the language-specific analysis strategies.
 *   `tools/`: Contains the core logic for file processing, Git integration, and AI evaluation.
