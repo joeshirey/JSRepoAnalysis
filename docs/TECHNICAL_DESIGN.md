@@ -6,11 +6,12 @@ This document outlines the technical design and architecture of the Code Quality
 
 ## 2. Architecture and System Design
 
-The system is a monolithic Python application designed to be run from the command line. It takes a file path, a directory path, or a log file as input, orchestrates a series of processing steps, and uses BigQuery as its data backend.
+The system is a monolithic Python application designed to be run from the command line. It takes a file path, a directory path, a CSV file of GitHub links, or a log file as input, orchestrates a series of processing steps, and uses BigQuery as its data backend.
 
 ### Core Components
 
 *   **`main.py`**: The main entry point and orchestrator of the application. It handles command-line argument parsing (`argparse`), file system traversal (`os.walk`), and calls the `CodeProcessor`. It also includes a special `--eval_only` mode for quickly analyzing a single file without database interaction.
+*   **`get_files_from_csv`**: This function, located in `main.py`, is responsible for processing a CSV file of GitHub links. It reads the CSV, extracts the repository names, and then uses a `ThreadPoolExecutor` to clone or update the repositories in parallel. It now dynamically determines the default branch of each repository by calling `git remote show` and parsing the output, which makes the cloning process more robust and avoids errors when a repository's default branch is not named `main`.
 *   **`tools/code_processor.py`**: The `CodeProcessor` class is the core of the application, responsible for orchestrating the analysis of a single file. It is composed of smaller, more focused components and supports lazy initialization of the Firestore repository.
 *   **`strategies/`**: This directory contains the language-specific logic.
     *   **`strategy_factory.py`**: A factory function that returns a `LanguageStrategy` instance based on the file extension.
@@ -39,15 +40,16 @@ The application uses a structured BigQuery table and a flattened view to store a
 
 ## 3. Data Flow
 
-1.  The user executes `main.py`, providing a file path, a directory path, or a log file to reprocess.
+1.  The user executes `main.py`, providing a file path, a directory path, a CSV of GitHub links, or a log file to reprocess.
 2.  `main.py` parses the arguments and gathers a list of files to process.
-3.  The `CodeProcessor` is initialized.
-4.  For each file in the list:
+3.  If the `--from-csv` flag is used, the `get_files_from_csv` function is called to clone or update the repositories.
+4.  The `CodeProcessor` is initialized.
+5.  For each file in the list:
     a.  The `CodeProcessor` calls the `strategy_factory` to get the appropriate `LanguageStrategy`.
     b.  It then calls the various tools to extract Git info, region tags, and perform the AI evaluation.
     c.  The results are stored in an `AnalysisResult` data class.
     d.  The `BigQueryRepository` is used to save the `AnalysisResult` to BigQuery.
-5.  If any errors occur during processing, they are logged to a dynamically named log file in the `logs/` directory.
+6.  If any errors occur during processing, they are logged to a dynamically named log file in the `logs/` directory.
 
 ## 4. Key Technologies
 
@@ -57,8 +59,8 @@ The application uses a structured BigQuery table and a flattened view to store a
 *   **Database:** Google Cloud BigQuery
 *   **Configuration:** `pydantic-settings` for managing environment variables.
 *   **Version Control Integration:** `git` (via `subprocess`).
+*   **Parallel Processing**: `ThreadPoolExecutor` for cloning and processing files in parallel.
 
 ## 5. Future Considerations
 
-*   **Batch Processing:** For very large codebases, the current sequential processing could be slow. The system could be refactored to use a `ThreadPoolExecutor` to process files in parallel.
 *   **Decoupling from Git:** The system currently requires the files to be within a Git repository to function correctly. This could be made optional to allow analysis of arbitrary, non-versioned code.

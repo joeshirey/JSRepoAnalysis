@@ -19,6 +19,8 @@ The Code Quality Analyzer is a command-line tool designed to analyze a local cod
 *   **Objective 4:** To use Firestore as a persistent, queryable database for storing the analysis results.
 *   **Objective 5:** To provide an efficiency mechanism that avoids re-analyzing files that have not changed since their last analysis.
 *   **Objective 6:** To provide a robust mechanism for reprocessing files that failed during a previous run.
+*   **Objective 7:** To provide a way to process a list of files from a CSV of GitHub links.
+*   **Objective 8:** To expand the test data to include a variety of scenarios.
 
 ## 4. Functional Requirements
 
@@ -33,8 +35,11 @@ The Code Quality Analyzer is a command-line tool designed to analyze a local cod
 | FR-7 | **Incremental Processing** | The tool MUST check if a file has been analyzed before and if its content has changed (based on the last Git commit date). It should skip analysis if the file is unchanged. |
 | FR-8 | **Forced Regeneration** | The tool MUST provide a command-line flag (`--regen`) to force re-analysis of a file, even if it has not changed. |
 | FR-9 | **Error Logging** | The tool MUST log any errors that occur during file processing to a dynamically named log file in the `logs/` directory. |
-| FR-11 | **Evaluation-Only Mode** | The tool MUST provide a command-line flag (`--eval_only`) to analyze a single file and print the results to the console without any database interaction. |
 | FR-10 | **Reprocessing** | The tool MUST provide a command-line flag (`--reprocess-log`) to reprocess files from a specified error log. |
+| FR-11 | **Evaluation-Only Mode** | The tool MUST provide a command-line flag (`--eval_only`) to analyze a single file and print the results to the console without any database interaction. |
+| FR-12 | **CSV Processing** | The tool MUST be able to accept a path to a CSV file of GitHub links as a command-line argument. |
+| FR-13 | **Dynamic Branch Detection** | The tool MUST dynamically determine the default branch of a repository when cloning or pulling, to avoid errors when the default branch is not named `main`. |
+| FR-14 | **Expanded Test Data** | The tool MUST include a variety of test CSV files to ensure robust testing. |
 
 ## 5. Out of Scope (Non-Goals)
 

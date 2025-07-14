@@ -58,7 +58,7 @@ The SQL definitions for the BigQuery table and the recommended analysis view are
 
 ## How to Run
 
-The tool can analyze a single file, an entire directory, or reprocess files from an error log.
+The tool can analyze a single file, an entire directory, a CSV of GitHub links, or reprocess files from an error log.
 
 ### Analyze a Single File or Directory
 
@@ -68,6 +68,14 @@ python main.py /path/to/your/file.js
 
 # Analyze a directory
 python main.py /path/to/your/directory/
+```
+
+### Analyze from a CSV
+
+To analyze a list of files from a CSV, use the `--from-csv` flag. The tool will clone the repositories if they don't exist, or pull the latest changes if they do. It now automatically detects the default branch of each repository.
+
+```sh
+python main.py --from-csv inventory.csv
 ```
 
 ### Evaluate a Single File
@@ -95,10 +103,12 @@ python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other
 ## Command-Line Arguments
 
 *   `file_link`: (Optional) The path to the code file or directory to analyze.
+*   `--from-csv`: (Optional) The path to a CSV file with GitHub links to process.
 *   `--regen`: Forces the tool to re-analyze files and update the corresponding record in BigQuery.
 *   `--db <table_name>`: Overrides the `BIGQUERY_TABLE` environment variable.
 *   `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
 *   `--eval_only`: Analyzes a single file and prints the results to the console without saving to BigQuery.
+*   `--workers`: The number of parallel threads to use for cloning and processing.
 
 ## Project Structure
 
@@ -110,3 +120,5 @@ python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other
 *   `tools/`: Contains the core logic for file processing, Git integration, and AI evaluation.
 *   `utils/`: Contains utility modules for logging, exception handling, and data classes.
 *   `prompts/`: Contains the text files used as templates for the AI evaluation prompts.
+*   `inventory.csv`: A sample CSV file for use with the `--from-csv` flag.
+*   `inventory-test.csv`, `inventory-test2.csv`, `inventory-test3.csv`, `inventory-test4.csv`: Smaller test files for development.
