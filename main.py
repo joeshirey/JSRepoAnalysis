@@ -35,6 +35,17 @@ def get_files_from_csv(csv_path, max_workers):
         if match:
             repos.add(match.group(1))
 
+    def get_default_branch(repo_url):
+        try:
+            result = subprocess.run(["git", "remote", "show", repo_url], check=True, capture_output=True, text=True)
+            for line in result.stdout.splitlines():
+                if 'HEAD branch' in line:
+                    return line.split(': ')[1]
+            return 'main' # Fallback
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Could not determine default branch for {repo_url}: {e.stderr}")
+            return 'main' # Fallback
+
     def clone_or_update_repo(repo):
         repo_url = f"https://github.com/{repo}.git"
         target_dir = os.path.join(clone_dir, repo)
@@ -42,7 +53,8 @@ def get_files_from_csv(csv_path, max_workers):
         try:
             if os.path.exists(target_dir):
                 logger.info(f"Repository {repo} already exists. Pulling latest changes...")
-                subprocess.run(["git", "-C", target_dir, "checkout", "main"], check=True, capture_output=True, text=True)
+                default_branch = get_default_branch(repo_url)
+                subprocess.run(["git", "-C", target_dir, "checkout", default_branch], check=True, capture_output=True, text=True)
                 subprocess.run(["git", "-C", target_dir, "pull"], check=True, capture_output=True, text=True)
             else:
                 logger.info(f"Cloning {repo_url} into {target_dir}...")
