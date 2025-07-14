@@ -187,6 +187,7 @@ errors.log
 .DS_Store
 .vscode/
 /scratch
+temp_clones/
 =======
 
 node_modules/
