@@ -49,6 +49,13 @@ The tool uses a `.env` file to manage configuration.
     *   `BIGQUERY_TABLE`: The name of the BigQuery table to use.
     *   `GOOGLE_GENAI_USE_VERTEXAI`: Set to `True` to use Vertex AI.
 
+## BigQuery Schema
+
+The SQL definitions for the BigQuery table and the recommended analysis view are located in the `BQ/` directory.
+
+*   **`create_table.sql`**: Contains the `CREATE OR REPLACE TABLE` statement for the main data table (`repo_analysis`). This table is structured with top-level columns for efficient querying and filtering, while storing complex, nested data (like commit history and evaluation results) as `JSON`.
+*   **`create_view.sql`**: Contains the `CREATE OR REPLACE VIEW` statement for the recommended analysis view (`repo_analysis_view`). This view flattens the JSON data from the main table, unnests the evaluation criteria, and ensures that only the most recent evaluation for each file is shown, providing a simplified and reliable data source for dashboards and analysis.
+
 ## How to Run
 
 The tool can analyze a single file, an entire directory, or reprocess files from an error log.

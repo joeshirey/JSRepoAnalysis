@@ -27,6 +27,16 @@ The system is a monolithic Python application designed to be run from the comman
 *   **`prompts/`**: This directory contains the text files used as templates for the AI evaluation prompts.
 *   **`config.py`**: This file uses `pydantic-settings` to load environment variables from the `.env` file into a `Settings` object. The key variables are `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VERTEXAI_MODEL_NAME`, `BIGQUERY_DATASET`, and `BIGQUERY_TABLE`.
 
+### BigQuery Schema
+
+The application uses a structured BigQuery table and a flattened view to store and analyze the data. The SQL definitions are located in the `BQ/` directory.
+
+*   **`repo_analysis` (Table)**: This is the main table where all the raw analysis data is stored. It is designed to be write-efficient and uses a structured schema with top-level columns for frequently queried fields like `github_link`, `product_category`, and `language`. Complex, semi-structured data, such as the full commit history and the detailed evaluation results from the AI model, are stored in `JSON` columns. This design provides a good balance between query performance and the flexibility to handle evolving data from the AI model.
+
+*   **`repo_analysis_view` (View)**: This view is the recommended interface for data analysis and visualization. It provides a clean, flattened representation of the data by:
+    1.  Unnesting the `criteria_breakdown` from the `evaluation_data` JSON column to expose each criterion's score and assessment as a top-level column.
+    2.  Using a `ROW_NUMBER()` window function to de-duplicate the records, ensuring that only the most recent evaluation for each unique `github_link` is included in the view. This provides a stable and reliable dataset for building dashboards and performing analysis.
+
 ## 3. Data Flow
 
 1.  The user executes `main.py`, providing a file path, a directory path, or a log file to reprocess.
