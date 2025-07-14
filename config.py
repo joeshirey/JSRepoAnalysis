@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_LOCATION: str
     VERTEXAI_MODEL_NAME: str
     FIRESTORE_DB: str
+    BIGQUERY_DATASET: str
+    BIGQUERY_TABLE: str
     GOOGLE_GENAI_USE_VERTEXAI: bool = True
 
 settings = Settings()

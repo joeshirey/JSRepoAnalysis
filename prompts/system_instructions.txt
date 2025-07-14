@@ -75,6 +75,7 @@ Produce a only a valid JSON object with the following structure (make sure it is
           * **Python**: PEP 8 (line length issues can be ignored).
           * **Ruby**: A common community standard such as The Ruby Style Guide.
           * **Rust**: The standard `rustfmt` formatting.
+          * **Terraform**: The standard `terraform fmt` formatting.
       * (Note: You can only assess internal consistency. Do not bother stating that cross-sample consistency cannot be fully judged from a single sample).
       * Ignore any errors related to copyright year
 
