@@ -1,6 +1,6 @@
 # Code Quality Analyzer
 
-This tool analyzes a local codebase of Javascript, Typescript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files, performs an AI-powered quality evaluation, and stores the results in a Firestore database.
+This tool analyzes a local codebase of Javascript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files, performs an AI-powered quality evaluation, and stores the results in a BigQuery table.
 
 ## Documentation
 
@@ -45,7 +45,8 @@ The tool uses a `.env` file to manage configuration.
     *   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
     *   `GOOGLE_CLOUD_LOCATION`: The Google Cloud region for Vertex AI (e.g., `us-central1`).
     *   `VERTEXAI_MODEL_NAME`: The name of the Gemini model to use (e.g., `gemini-1.5-flash-001`).
-    *   `FIRESTORE_DB`: The name of the Firestore database to use.
+    *   `BIGQUERY_DATASET`: The name of the BigQuery dataset to use.
+    *   `BIGQUERY_TABLE`: The name of the BigQuery table to use.
     *   `GOOGLE_GENAI_USE_VERTEXAI`: Set to `True` to use Vertex AI.
 
 ## How to Run
@@ -87,10 +88,10 @@ python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other
 ## Command-Line Arguments
 
 *   `file_link`: (Optional) The path to the code file or directory to analyze.
-*   `--regen`: Forces the tool to re-analyze files that have already been processed and stored in Firestore.
-*   `--db <database_name>`: Overrides the `FIRESTORE_DB` environment variable.
+*   `--regen`: Forces the tool to re-analyze files and update the corresponding record in BigQuery.
+*   `--db <table_name>`: Overrides the `BIGQUERY_TABLE` environment variable.
 *   `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
-*   `--eval_only`: Analyzes a single file and prints the results to the console without saving to Firestore.
+*   `--eval_only`: Analyzes a single file and prints the results to the console without saving to BigQuery.
 
 ## Project Structure
 

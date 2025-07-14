@@ -6,7 +6,7 @@ This document outlines the technical design and architecture of the Code Quality
 
 ## 2. Architecture and System Design
 
-The system is a monolithic Python application designed to be run from the command line. It takes a file path, a directory path, or a log file as input, orchestrates a series of processing steps, and uses Firestore as its data backend.
+The system is a monolithic Python application designed to be run from the command line. It takes a file path, a directory path, or a log file as input, orchestrates a series of processing steps, and uses BigQuery as its data backend.
 
 ### Core Components
 
@@ -19,13 +19,13 @@ The system is a monolithic Python application designed to be run from the comman
     *   **`git_file_processor.py`**: Contains the `GitFileProcessor` class, which uses the `git` command-line tool via `subprocess` to extract metadata about a file.
     *   **`extract_region_tags.py`**: Contains the `RegionTagExtractor` class, which reads a file and uses regular expressions to find and extract all Google Cloud-style region tags.
     *   **`evaluate_code_file.py`**: Contains the `CodeEvaluator` class, which is responsible for the AI-powered analysis. It reads a prompt template from the `prompts/` directory, injects the code into the prompt, and uses the `vertexai` library to call the configured Gemini model.
-    *   **`firestore.py`**: Contains the `FirestoreRepository` class, which encapsulates all interactions with the Firestore database.
+    *   **`bigquery.py`**: Contains the `BigQueryRepository` class, which encapsulates all interactions with the BigQuery table.
 *   **`utils/`**: This directory contains utility modules.
     *   **`logger.py`**: Configures a centralized logger for the application.
     *   **`exceptions.py`**: Defines custom exception classes for the application.
     *   **`data_classes.py`**: Defines the `AnalysisResult` data class, which provides a structured way to store the analysis results.
 *   **`prompts/`**: This directory contains the text files used as templates for the AI evaluation prompts.
-*   **`config.py`**: This file uses `pydantic-settings` to load environment variables from the `.env` file into a `Settings` object. The key variables are `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VERTEXAI_MODEL_NAME`, and `FIRESTORE_DB`.
+*   **`config.py`**: This file uses `pydantic-settings` to load environment variables from the `.env` file into a `Settings` object. The key variables are `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VERTEXAI_MODEL_NAME`, `BIGQUERY_DATASET`, and `BIGQUERY_TABLE`.
 
 ## 3. Data Flow
 
@@ -36,7 +36,7 @@ The system is a monolithic Python application designed to be run from the comman
     a.  The `CodeProcessor` calls the `strategy_factory` to get the appropriate `LanguageStrategy`.
     b.  It then calls the various tools to extract Git info, region tags, and perform the AI evaluation.
     c.  The results are stored in an `AnalysisResult` data class.
-    d.  The `FirestoreRepository` is used to save the `AnalysisResult` to Firestore.
+    d.  The `BigQueryRepository` is used to save the `AnalysisResult` to BigQuery.
 5.  If any errors occur during processing, they are logged to a dynamically named log file in the `logs/` directory.
 
 ## 4. Key Technologies
@@ -44,7 +44,7 @@ The system is a monolithic Python application designed to be run from the comman
 *   **Language:** Python 3
 *   **Command-Line Parsing:** `argparse`
 *   **AI/LLM:** Google Gemini, via the `google-cloud-aiplatform` SDK.
-*   **Database:** Google Cloud Firestore
+*   **Database:** Google Cloud BigQuery
 *   **Configuration:** `pydantic-settings` for managing environment variables.
 *   **Version Control Integration:** `git` (via `subprocess`).
 
