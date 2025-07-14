@@ -45,16 +45,16 @@ Produce a only a valid JSON object with the following structure (make sure it is
       * Assessment should note any assumptions made about the execution environment. There is no need to worry about GCP authentication to run the sample - it can be assumed and not noted.
       * (Note: The experience for documentation readers should only consider code between commented out '[START' and '[END' markers. Code outside these comments supports maintenance and runnability but is not shown to readers.)
 
-2.  **API Effectiveness & Correctness (criterion\_name: `api_effectiveness_and_correctness`, Weight: 0.40)**
+2.  API Effectiveness & Correctness (criterion_name: `api_effectiveness_and_correctness`, Weight: 0.40)
 
-      * **Crucially, you MUST validate that all API calls, client initialization, methods, method parameters, and response object properties are correct.** Your primary task is to act as a technical validator. **If the sample uses a new or less common library that you were instructed to assume is valid (e.g., '@google-cloud/modelarmor'), you must verify its methods by searching for its public documentation and then evaluating the sample against standard Google Cloud client library patterns.** Your inability to find a newer library in your internal training data is not a valid reason to score this criterion as 0.
-      * **Do not assume a method or property exists.** A hallucinated method, like calling `.toDate()` on a Protobuf Timestamp object that doesn't have that method, is a critical failure that must be caught and penalized heavily under this criterion.
-      * **Verify the response object structure.** Ensure the code correctly handles the actual structure of API responses, rather than an assumed or hallucinated structure.
-      * Are the most important and relevant parameters for the demonstrated API call being used correctly and clearly?
-      * Does it showcase best practices for interacting with this specific API? (e.g., error handling, resource management if applicable within a small sample).
-      * Are essential variables like project ID and location correctly passed to API clients or methods if required by the specific API service?
-      * Does the sample implement rudimentary error handling (there is no need to handle specific API errors, just rudimentary error handling)
-      * (Note: Global error handling (such as uncaughtExceptions) does not count as error handling for purposes of documentation samples because it will not be shown to developers even though it is present in the code.)
+    * **Crucially, you MUST validate all API calls, client initialization, methods, method parameters, and response object properties against the latest official client library documentation.** Your primary task is to act as a technical validator.
+    * **Prioritize Official Documentation as the Single Source of Truth:** Your validation MUST be based on the latest documentation from official sources (e.g., cloud.google.com, PyPI, Maven Central, npmjs.com). If you find conflicting information in blog posts, forums (like Stack Overflow), or older tutorials, the **official documentation MUST take precedence.** Penalizing a sample based on outdated or non-official sources is a critical failure.
+    * **Do not guess about API correctness.** A hallucinated method (claiming an API exists when it doesn't) or a **false negative (claiming a real, documented API does not exist, as happened with `enable_object_retention`)** are both critical failures that must be heavily penalized under this criterion.
+    * Verify the response object structure. Ensure the code correctly handles the actual structure of API responses, rather than an assumed or hallucinated structure.
+    * Are the most important and relevant parameters for the demonstrated API call being used correctly and clearly?
+    * Does it showcase best practices for interacting with this specific API? (e.g., error handling, resource management if applicable within a small sample).
+    * Are essential variables like project ID and location correctly passed to API clients or methods if required by the specific API service?
+    * Does the sample implement rudimentary error handling (there is no need to handle specific API errors, just rudimentary error handling)
 
 3.  **Comments & Code Clarity (criterion\_name: `comments_and_code_clarity`, Weight: 0.10)**
 
@@ -92,10 +92,11 @@ Produce a only a valid JSON object with the following structure (make sure it is
       * Does the sample use type hints (e.g., in Python, TypeScript) or explicit type declarations (e.g., in Java, C\#) where idiomatic, to reduce ambiguity for both human readers and automated tools?
       * Is the demonstrated pattern clear and unambiguous, providing a strong, positive example for an LLM to learn from? The code's intent should be obvious from reading the code itself.
 
-### **Instructions for the AI Reviewer:**
+### Instructions for the AI Reviewer:
 
-  * **Adopt a "Verification First" workflow.** For every code sample, your first step is to identify all interactions with the GCP API. For each one, internally trace and validate the client library, the specific method, its parameters, and how the response is handled before you proceed to evaluate for style or best practices.
-  * **Verify Unrecognized Dependencies:** If you encounter a package or library name in a dependency file or import statement that you do not immediately recognize, you MUST use your available search tools to verify its existence in a public package repository before concluding that it is non-existent.
+  * **Adopt a "Verification First" workflow.** For every code sample, your first step is to identify all interactions with the GCP API. For each one, you must trace and validate the client library, the specific method, its parameters, and how the response is handled **by checking against the latest official API documentation for that library** before you proceed to evaluate other criteria.
+  * **Handle Discrepancies:** When your search results show conflicting information (e.g., a blog post shows one method, official documentation shows another), you must explicitly resolve the conflict by defaulting to the official source. Your assessment must reflect the most current and authoritative documentation.
+  * **Verify Unrecognized Dependencies:** If you encounter a package or library name... (rest of this instruction is fine)
   * Your primary goal is to help improve the quality of these code samples for documentation and as training data.
   * **Avoid Double Penalties: Each distinct problem in the code should be penalized only once, under the most specific and relevant criterion. For example, if an API call is missing error handling, the score deduction and the recommendation must fall under 'api\_effectiveness\_and\_correctness', not under 'language\_best\_practices'.**
   * You must validate that the code correctly interacts with the structure of API response objects.
