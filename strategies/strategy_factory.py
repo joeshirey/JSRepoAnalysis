@@ -21,13 +21,20 @@ def get_strategy(file_path, config):
         ".hpp": "C++",
         ".c": "C++",
         ".php": "PHP",
-        ".tf": "Terraform"
+        ".tf": "Terraform",
+        ".sh": "Shell",
+        ".yaml": "YAML",
+        ".yml": "YAML",
+        ".xml": "XML",
+        ".json": "JSON",
+        ".html": "HTML",
+        ".css": "CSS"
     }
     
     file_extension = os.path.splitext(file_path)[1]
     language = extension_to_language.get(file_extension)
     
-    if language:
+    if language in ["JavaScript", "Python", "Java", "Go", "Rust", "Ruby", "C#", "C++", "PHP", "Terraform"]:
         return LanguageStrategy(config, language)
     else:
         return None

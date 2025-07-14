@@ -7,15 +7,18 @@ import re
 import shutil
 import subprocess
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
 from config import settings
 from tools.code_processor import CodeProcessor
 from strategies.strategy_factory import get_strategy
 from utils.logger import logger
 from utils.exceptions import NoRegionTagsError
 
-def get_files_from_csv(csv_path):
+def get_files_from_csv(csv_path, max_workers):
     """
-    Reads a CSV file of GitHub links, clones or updates the repos, and returns a list of local file paths.
+    Reads a CSV file of GitHub links, clones or updates the repos in parallel, 
+    and returns a list of local file paths.
     """
     clone_dir = "temp_clones"
     if not os.path.exists(clone_dir):
@@ -32,28 +35,39 @@ def get_files_from_csv(csv_path):
         if match:
             repos.add(match.group(1))
 
-    for repo in repos:
+    def clone_or_update_repo(repo):
         repo_url = f"https://github.com/{repo}.git"
         target_dir = os.path.join(clone_dir, repo)
         
-        if os.path.exists(target_dir):
-            logger.info(f"Repository {repo} already exists. Pulling latest changes...")
-            try:
+        try:
+            if os.path.exists(target_dir):
+                logger.info(f"Repository {repo} already exists. Pulling latest changes...")
                 subprocess.run(["git", "-C", target_dir, "checkout", "main"], check=True, capture_output=True, text=True)
                 subprocess.run(["git", "-C", target_dir, "pull"], check=True, capture_output=True, text=True)
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Error updating repository {repo}: {e.stderr}")
-                # If update fails, we might want to re-clone, but for now, we'll just log the error.
-        else:
-            logger.info(f"Cloning {repo_url} into {target_dir}...")
-            subprocess.run(["git", "clone", repo_url, target_dir], check=True, capture_output=True, text=True)
+            else:
+                logger.info(f"Cloning {repo_url} into {target_dir}...")
+                subprocess.run(["git", "clone", repo_url, target_dir], check=True, capture_output=True, text=True)
+            return f"Successfully processed {repo}"
+        except subprocess.CalledProcessError as e:
+            return f"Error processing repository {repo}: {e.stderr}"
+        except Exception as e:
+            return f"An unexpected error occurred with repository {repo}: {e}"
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_repo = {executor.submit(clone_or_update_repo, repo): repo for repo in repos}
+        for future in as_completed(future_to_repo):
+            repo = future_to_repo[future]
+            try:
+                result = future.result()
+                logger.info(result)
+            except Exception as exc:
+                logger.error(f'{repo} generated an exception: {exc}')
 
     local_files = []
     for link in github_links:
         match = re.search(r"https://github.com/([^/]+/[^/]+)/blob/[^/]+/(.+)", link)
         if match:
             repo_name, file_path = match.groups()
-            # Remove line number fragments from the file path
             file_path = file_path.split('#')[0]
             local_path = os.path.join(clone_dir, repo_name, file_path)
             if os.path.exists(local_path):
@@ -63,6 +77,27 @@ def get_files_from_csv(csv_path):
 
     return local_files
 
+def process_file_wrapper(processor, file_path, regen, error_logger, processed_counts, skipped_counts):
+    file_extension = os.path.splitext(file_path)[1]
+    strategy = get_strategy(file_path, settings)
+    
+    if strategy:
+        try:
+            logger.info(f"Processing file: {file_path}")
+            processor.process_file(file_path, regen=regen)
+            processed_counts[file_extension] += 1
+            logger.info(f"Finished processing file: {file_path}")
+        except NoRegionTagsError as e:
+            logger.info(f"Skipping file {file_path}: {e}")
+            skipped_counts[file_extension] += 1
+        except Exception as e:
+            logger.error(f"Error processing file {file_path}: {e}")
+            error_logger.error(file_path)
+            skipped_counts[file_extension] += 1
+    else:
+        logger.info(f"Skipping unsupported file type: {file_path}")
+        skipped_counts[file_extension] += 1
+
 def main():
     parser = argparse.ArgumentParser(description="Process a code file or directory.")
     parser.add_argument("file_link", nargs='?', default=None, help="Path to the code file or directory.")
@@ -71,9 +106,9 @@ def main():
     parser.add_argument("--db", help="BigQuery table name (overrides environment variable).")
     parser.add_argument("--reprocess-log", help="Path to a log file to reprocess.")
     parser.add_argument("--eval_only", action="store_true", help="Only evaluate a single file and print the result.")
+    parser.add_argument("--workers", type=int, default=10, help="Number of parallel threads to use.")
     args = parser.parse_args()
 
-    # If in evaluation-only mode, process a single file and exit.
     if args.eval_only:
         if not args.file_link or not os.path.isfile(args.file_link):
             parser.error("--eval_only requires a single file path.")
@@ -87,14 +122,12 @@ def main():
             logger.error(f"Error during evaluation: {e}")
         return
 
-    # Override the BigQuery table name if provided on the command line.
     if args.db:
         settings.BIGQUERY_TABLE = args.db
 
-    if not args.file_link and not args.reprocess_log and not args.from_csv:
+    if not any([args.file_link, args.reprocess_log, args.from_csv]):
         parser.error("Either file_link, --reprocess-log, or --from-csv is required.")
 
-    # Create a dynamic log file name based on the run parameters.
     source = "csv" if args.from_csv else "reprocess" if args.reprocess_log else "dir" if os.path.isdir(args.file_link) else "file"
     log_filename_parts = [datetime.now().strftime("%Y%m%d-%H%M%S"), source]
     if args.regen:
@@ -110,10 +143,9 @@ def main():
     error_handler.setFormatter(logging.Formatter('%(message)s'))
     error_logger.addHandler(error_handler)
 
-    # Gather the list of files to process from the specified source.
     files_to_process = []
     if args.from_csv:
-        files_to_process = get_files_from_csv(args.from_csv)
+        files_to_process = get_files_from_csv(args.from_csv, args.workers)
     elif args.reprocess_log:
         try:
             with open(args.reprocess_log, 'r') as f:
@@ -128,28 +160,32 @@ def main():
         for root, _, files in os.walk(args.file_link):
             for file in files:
                 file_path = os.path.join(root, file)
-                if get_strategy(file_path, settings):
-                    files_to_process.append(file_path)
+                files_to_process.append(file_path)
 
     if not files_to_process:
         logger.info("No files to process.")
         return
 
-    # Process all files in a single session to avoid repeated connections.
+    processed_counts = defaultdict(int)
+    skipped_counts = defaultdict(int)
+    
     processor = CodeProcessor(settings)
-    total_files = len(files_to_process)
     try:
-        for i, file_path in enumerate(files_to_process):
-            try:
-                logger.info(f"Processing file {i+1}/{total_files}: {file_path}")
-                processor.process_file(file_path, regen=args.regen)
-            except NoRegionTagsError as e:
-                logger.info(f"Skipping file {file_path}: {e}")
-            except Exception as e:
-                logger.error(f"Error processing file {file_path}: {e}")
-                error_logger.error(file_path)
+        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            futures = [executor.submit(process_file_wrapper, processor, file, args.regen, error_logger, processed_counts, skipped_counts) for file in files_to_process]
+            for future in as_completed(futures):
+                future.result()
     finally:
         processor.close()
+
+    logger.info("\n--- Processing Summary ---")
+    logger.info("Processed files:")
+    for ext, count in processed_counts.items():
+        logger.info(f"  {ext}: {count}")
+    logger.info("\nSkipped files:")
+    for ext, count in skipped_counts.items():
+        logger.info(f"  {ext}: {count}")
+    logger.info("------------------------\n")
 
     if args.reprocess_log:
         archive_path = os.path.join("logs", "archive", os.path.basename(args.reprocess_log))
@@ -167,6 +203,6 @@ def main():
             print(f"\nTo reprocess, run the following command:")
             print(f"uv run main.py --reprocess-log {error_log_path} --regen")
 
-
 if __name__ == "__main__":
     main()
+
