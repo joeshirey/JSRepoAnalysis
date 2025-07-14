@@ -15,12 +15,11 @@ from utils.exceptions import NoRegionTagsError
 
 def get_files_from_csv(csv_path):
     """
-    Reads a CSV file of GitHub links, clones the repos, and returns a list of local file paths.
+    Reads a CSV file of GitHub links, clones or updates the repos, and returns a list of local file paths.
     """
     clone_dir = "temp_clones"
-    if os.path.exists(clone_dir):
-        shutil.rmtree(clone_dir)
-    os.makedirs(clone_dir)
+    if not os.path.exists(clone_dir):
+        os.makedirs(clone_dir)
 
     with open(csv_path, 'r') as f:
         reader = csv.reader(f)
@@ -36,8 +35,18 @@ def get_files_from_csv(csv_path):
     for repo in repos:
         repo_url = f"https://github.com/{repo}.git"
         target_dir = os.path.join(clone_dir, repo)
-        logger.info(f"Cloning {repo_url} into {target_dir}...")
-        subprocess.run(["git", "clone", repo_url, target_dir], check=True, capture_output=True, text=True)
+        
+        if os.path.exists(target_dir):
+            logger.info(f"Repository {repo} already exists. Pulling latest changes...")
+            try:
+                subprocess.run(["git", "-C", target_dir, "checkout", "main"], check=True, capture_output=True, text=True)
+                subprocess.run(["git", "-C", target_dir, "pull"], check=True, capture_output=True, text=True)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Error updating repository {repo}: {e.stderr}")
+                # If update fails, we might want to re-clone, but for now, we'll just log the error.
+        else:
+            logger.info(f"Cloning {repo_url} into {target_dir}...")
+            subprocess.run(["git", "clone", repo_url, target_dir], check=True, capture_output=True, text=True)
 
     local_files = []
     for link in github_links:
