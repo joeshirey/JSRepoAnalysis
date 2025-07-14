@@ -1,6 +1,6 @@
 # Code Quality Analyzer
 
-This tool analyzes a local codebase of Javascript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files, performs an AI-powered quality evaluation, and stores the results in a BigQuery table.
+This tool analyzes a local codebase of Javascript, Python, Java, Go, Rust, Ruby, C#, C++, PHP, and Terraform files, performs an AI-powered quality evaluation, and stores the results in a BigQuery table.
 
 ## Documentation
 

@@ -6,20 +6,22 @@ def get_strategy(file_path, config):
     Returns the appropriate language strategy based on the file extension.
     """
     extension_to_language = {
-        ".js": "javascript",
-        ".jsx": "javascript",
-        ".ts": "javascript",
-        ".tsx": "javascript",
-        ".py": "python",
-        ".java": "java",
-        ".go": "go",
-        ".rs": "rust",
-        ".rb": "ruby",
-        ".cs": "csharp",
-        ".cpp": "cpp",
-        ".h": "cpp",
-        ".hpp": "cpp",
-        ".php": "php"
+        ".js": "JavaScript",
+        ".jsx": "JavaScript",
+        ".ts": "JavaScript",
+        ".tsx": "JavaScript",
+        ".py": "Python",
+        ".java": "Java",
+        ".go": "Go",
+        ".rs": "Rust",
+        ".rb": "Ruby",
+        ".cs": "C#",
+        ".cpp": "C++",
+        ".h": "C++",
+        ".hpp": "C++",
+        ".c": "C++",
+        ".php": "PHP",
+        ".tf": "Terraform"
     }
     
     file_extension = os.path.splitext(file_path)[1]

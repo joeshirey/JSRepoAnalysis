@@ -92,7 +92,8 @@ class GitFileProcessor(BaseTool):
         """
         try:
             git_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=os.path.dirname(file_path)).decode("utf-8").strip()
-            git_log = subprocess.check_output(["git", "log", "--follow", "--pretty=format:%H%n%an%n%ae%n%ad%n%s%n", "--", file_path], cwd=git_root).decode("utf-8")
+            relative_file_path = os.path.relpath(file_path, git_root)
+            git_log = subprocess.check_output(["git", "log", "--follow", "--pretty=format:%H%n%an%n%ae%n%ad%n%s%n", "--", relative_file_path], cwd=git_root).decode("utf-8")
             commits = []
             log_lines = git_log.strip().split('\n')
             i = 0

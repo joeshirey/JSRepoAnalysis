@@ -25,7 +25,7 @@ def get_files_from_csv(csv_path):
     with open(csv_path, 'r') as f:
         reader = csv.reader(f)
         next(reader)  # Skip header row
-        github_links = [row[0] for row in reader]
+        github_links = [row[2] for row in reader]
 
     repos = set()
     for link in github_links:
@@ -37,13 +37,15 @@ def get_files_from_csv(csv_path):
         repo_url = f"https://github.com/{repo}.git"
         target_dir = os.path.join(clone_dir, repo)
         logger.info(f"Cloning {repo_url} into {target_dir}...")
-        subprocess.run(["git", "clone", repo_url, target_dir], check=True)
+        subprocess.run(["git", "clone", repo_url, target_dir], check=True, capture_output=True, text=True)
 
     local_files = []
     for link in github_links:
-        match = re.search(r"https://github.com/([^/]+/[^/]+)/blob/([^/]+)/(.+)", link)
+        match = re.search(r"https://github.com/([^/]+/[^/]+)/blob/[^/]+/(.+)", link)
         if match:
-            repo_name, _, file_path = match.groups()
+            repo_name, file_path = match.groups()
+            # Remove line number fragments from the file path
+            file_path = file_path.split('#')[0]
             local_path = os.path.join(clone_dir, repo_name, file_path)
             if os.path.exists(local_path):
                 local_files.append(local_path)
