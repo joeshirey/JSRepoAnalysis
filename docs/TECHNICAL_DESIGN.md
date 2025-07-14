@@ -10,7 +10,7 @@ The system is a monolithic Python application designed to be run from the comman
 
 ### Core Components
 
-*   **`main.py`**: The main entry point and orchestrator of the application. It handles command-line argument parsing (`argparse`), file system traversal (`os.walk`), and calls the `CodeProcessor`. It also includes a special `--eval_only` mode for quickly analyzing a single file without database interaction.
+*   **`main.py`**: The main entry point and orchestrator of the application. It handles command-line argument parsing (`argparse`), file system traversal (`os.walk`), and calls the `CodeProcessor`. It also includes a special `--eval-only` mode for quickly analyzing a single file without database interaction.
 *   **`get_files_from_csv`**: This function, located in `main.py`, is responsible for processing a CSV file of GitHub links. It reads the CSV, extracts the repository names, and then uses a `ThreadPoolExecutor` to clone or update the repositories in parallel. It now dynamically determines the default branch of each repository by calling `git remote show` and parsing the output, which makes the cloning process more robust and avoids errors when a repository's default branch is not named `main`.
 *   **`tools/code_processor.py`**: The `CodeProcessor` class is the core of the application, responsible for orchestrating the analysis of a single file. It is composed of smaller, more focused components and supports lazy initialization of the Firestore repository.
 *   **`strategies/`**: This directory contains the language-specific logic.

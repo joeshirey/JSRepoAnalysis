@@ -36,7 +36,7 @@ The Code Quality Analyzer is a command-line tool designed to analyze a local cod
 | FR-8 | **Forced Regeneration** | The tool MUST provide a command-line flag (`--regen`) to force re-analysis of a file, even if it has not changed. |
 | FR-9 | **Error Logging** | The tool MUST log any errors that occur during file processing to a dynamically named log file in the `logs/` directory. |
 | FR-10 | **Reprocessing** | The tool MUST provide a command-line flag (`--reprocess-log`) to reprocess files from a specified error log. |
-| FR-11 | **Evaluation-Only Mode** | The tool MUST provide a command-line flag (`--eval_only`) to analyze a single file and print the results to the console without any database interaction. |
+| FR-11 | **Evaluation-Only Mode** | The tool MUST provide a command-line flag (`--eval-only`) to analyze a single file and print the results to the console without any database interaction. |
 | FR-12 | **CSV Processing** | The tool MUST be able to accept a path to a CSV file of GitHub links as a command-line argument. |
 | FR-13 | **Dynamic Branch Detection** | The tool MUST dynamically determine the default branch of a repository when cloning or pulling, to avoid errors when the default branch is not named `main`. |
 | FR-14 | **Expanded Test Data** | The tool MUST include a variety of test CSV files to ensure robust testing. |

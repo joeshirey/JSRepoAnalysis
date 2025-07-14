@@ -80,10 +80,10 @@ python main.py --from-csv inventory.csv
 
 ### Evaluate a Single File
 
-To quickly evaluate a single file and print the results to the console without saving them to Firestore, use the `--eval_only` flag:
+To quickly evaluate a single file and print the results to the console without saving them to Firestore, use the `--eval-only` flag:
 
 ```sh
-python main.py --eval_only /path/to/your/file.js
+python main.py --eval-only /path/to/your/file.js
 ```
 
 ### Reprocessing Errored Files
@@ -107,7 +107,7 @@ python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other
 *   `--regen`: Forces the tool to re-analyze files and update the corresponding record in BigQuery.
 *   `--db <table_name>`: Overrides the `BIGQUERY_TABLE` environment variable.
 *   `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
-*   `--eval_only`: Analyzes a single file and prints the results to the console without saving to BigQuery.
+*   `--eval-only`: Analyzes a single file and prints the results to the console without saving to BigQuery.
 *   `--workers`: The number of parallel threads to use for cloning and processing.
 
 ## Project Structure

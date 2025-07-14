@@ -117,13 +117,13 @@ def main():
     parser.add_argument("--regen", action="store_true", help="Overwrite existing BigQuery entry if true.")
     parser.add_argument("--db", help="BigQuery table name (overrides environment variable).")
     parser.add_argument("--reprocess-log", help="Path to a log file to reprocess.")
-    parser.add_argument("--eval_only", action="store_true", help="Only evaluate a single file and print the result.")
+    parser.add_argument("--eval-only", action="store_true", help="Only evaluate a single file and print the result.")
     parser.add_argument("--workers", type=int, default=10, help="Number of parallel threads to use.")
     args = parser.parse_args()
 
     if args.eval_only:
         if not args.file_link or not os.path.isfile(args.file_link):
-            parser.error("--eval_only requires a single file path.")
+            parser.error("--eval-only requires a single file path.")
         
         processor = CodeProcessor(settings)
         try:
