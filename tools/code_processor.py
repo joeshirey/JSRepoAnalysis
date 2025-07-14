@@ -5,7 +5,7 @@ import demjson3
 from datetime import datetime
 from tools.git_file_processor import GitFileProcessor
 from tools.extract_region_tags import RegionTagExtractor
-from tools.firestore import FirestoreRepository
+from tools.bigquery import BigQueryRepository
 from strategies.strategy_factory import get_strategy
 from utils.logger import logger
 from utils.exceptions import UnsupportedFileTypeError, GitRepositoryError, NoRegionTagsError
@@ -15,16 +15,15 @@ from dataclasses import asdict
 class CodeProcessor:
     def __init__(self, settings):
         self.settings = settings
-        self._firestore_repo = None
+        self._bigquery_repo = None
         self.git_processor = GitFileProcessor()
         self.tag_extractor = RegionTagExtractor()
 
-    # Lazily initialize the Firestore repository to avoid connecting when not needed (e.g., --eval_only).
     @property
-    def firestore_repo(self):
-        if self._firestore_repo is None:
-            self._firestore_repo = FirestoreRepository(self.settings)
-        return self._firestore_repo
+    def bigquery_repo(self):
+        if self._bigquery_repo is None:
+            self._bigquery_repo = BigQueryRepository(self.settings)
+        return self._bigquery_repo
 
     def process_file(self, file_path, regen=False):
         strategy = get_strategy(file_path, self.settings)
@@ -32,15 +31,42 @@ class CodeProcessor:
             raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")
 
         git_info = self._get_git_info(file_path)
-        document_id = self._get_document_id(git_info)
-        collection_name = strategy.language
-
-        if not regen and self._is_already_processed(collection_name, document_id, git_info):
+        
+        if regen:
+            logger.info(f"Regen is true, deleting existing records for {git_info['github_link']}")
+            self.bigquery_repo.delete(git_info["github_link"], git_info["last_updated"])
+        elif self._is_already_processed(git_info):
             logger.info(f"{file_path} already processed and up-to-date, skipping.")
             return
 
         analysis_result = self._analyze_file(file_path, strategy, git_info)
-        self._save_result(collection_name, document_id, analysis_result)
+        
+        bigquery_row = self._build_bigquery_row(analysis_result, strategy.language, file_path)
+        self._save_result(bigquery_row)
+
+    def _is_already_processed(self, git_info):
+        github_link = git_info["github_link"]
+        last_updated = git_info.get("last_updated")
+        
+        # Convert last_updated string to date object if it's not None
+        if last_updated:
+            last_updated_dt = datetime.strptime(last_updated, '%Y-%m-%d').date()
+        else:
+            last_updated_dt = None
+
+        existing_record = self.bigquery_repo.read(github_link)
+        
+        if existing_record and 'last_updated' in existing_record and existing_record['last_updated']:
+            # Ensure existing_record['last_updated'] is a date object for comparison
+            if isinstance(existing_record['last_updated'], datetime):
+                existing_last_updated_dt = existing_record['last_updated'].date()
+            else:
+                # Assuming it's a string in 'YYYY-MM-DD' format
+                existing_last_updated_dt = datetime.strptime(str(existing_record['last_updated']), '%Y-%m-%d').date()
+            
+            return existing_last_updated_dt == last_updated_dt
+        
+        return False
 
     def _get_git_info(self, file_path):
         git_info = self.git_processor.execute(file_path)
@@ -48,13 +74,28 @@ class CodeProcessor:
             raise GitRepositoryError(f"File not in git repository: {file_path}")
         return git_info
 
-    def _get_document_id(self, git_info):
-        github_link = git_info["github_link"]
-        return github_link.replace("/", "_").replace(".", "_").replace(":", "_").replace("-", "_")
+    def _build_bigquery_row(self, analysis_result, language, file_path):
+        git_info = analysis_result.git_info
+        evaluation_data = analysis_result.evaluation_data
 
-    def _is_already_processed(self, collection_name, document_id, git_info):
-        existing_doc = self.firestore_repo.read(collection_name, document_id)
-        return existing_doc and existing_doc.get('git_info', {}).get('last_updated') == git_info.get('last_updated')
+        return {
+            "github_link": git_info.get("github_link"),
+            "file_path": file_path,
+            "github_owner": git_info.get("github_owner"),
+            "github_repo": git_info.get("github_repo"),
+            "product_category": evaluation_data.get("product_category"),
+            "product_name": evaluation_data.get("product_name"),
+            "language": language,
+            "overall_compliance_score": evaluation_data.get("overall_compliance_score"),
+            "evaluation_data": json.dumps(evaluation_data),
+            "region_tags": analysis_result.region_tags,
+            "raw_code": analysis_result.raw_code,
+            "evaluation_date": analysis_result.evaluation_date,
+            "last_updated": git_info.get("last_updated"),
+            "branch_name": git_info.get("branch_name"),
+            "commit_history": json.dumps(git_info.get("commit_history")),
+            "metadata": json.dumps(git_info.get("metadata")),
+        }
 
     def _analyze_file(self, file_path, strategy, git_info):
         region_tags = self.tag_extractor.execute(file_path)
@@ -74,15 +115,12 @@ class CodeProcessor:
     def _evaluate_code(self, strategy, file_path, region_tag, github_link):
         style_info = strategy.evaluate_code(file_path, region_tag, github_link)
         
-        # Use a regex to extract the JSON object from the response
         match = re.search(r"```json\s*({.*})\s*```", style_info, re.DOTALL)
         if match:
             cleaned_text = match.group(1)
         else:
-            # Fallback for cases where the JSON is not in a code block
             cleaned_text = style_info.strip()
 
-        # Remove trailing commas from arrays and objects that cause JSON errors
         cleaned_text = re.sub(r",\s*([\]}])", r"\1", cleaned_text)
         
         try:
@@ -103,12 +141,12 @@ class CodeProcessor:
         except Exception as e:
             return f"Error reading file: {e}"
 
-    def _save_result(self, collection_name, document_id, result):
-        self.firestore_repo.create(collection_name, document_id, asdict(result))
+    def _save_result(self, row):
+        self.bigquery_repo.create(row)
 
     def close(self):
-        if self._firestore_repo:
-            self._firestore_repo.close()
+        if self._bigquery_repo:
+            self._bigquery_repo.close()
 
     def analyze_file_only(self, file_path):
         """

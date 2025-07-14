@@ -3,6 +3,7 @@ google-cloud-secret-manager
 google-api-core
 google-genai
 google-cloud-firestore
+google-cloud-bigquery
 firebase_admin
 pydantic
 demjson3

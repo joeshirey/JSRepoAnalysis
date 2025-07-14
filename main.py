@@ -12,8 +12,8 @@ from utils.exceptions import NoRegionTagsError
 def main():
     parser = argparse.ArgumentParser(description="Process a code file or directory.")
     parser.add_argument("file_link", nargs='?', default=None, help="Path to the code file or directory.")
-    parser.add_argument("--regen", action="store_true", help="Overwrite existing Firestore entry if true.")
-    parser.add_argument("--db", help="Firestore database name (overrides environment variable).")
+    parser.add_argument("--regen", action="store_true", help="Overwrite existing BigQuery entry if true.")
+    parser.add_argument("--db", help="BigQuery table name (overrides environment variable).")
     parser.add_argument("--reprocess-log", help="Path to a log file to reprocess.")
     parser.add_argument("--eval_only", action="store_true", help="Only evaluate a single file and print the result.")
     args = parser.parse_args()
@@ -32,9 +32,9 @@ def main():
             logger.error(f"Error during evaluation: {e}")
         return
 
-    # Override the Firestore database name if provided on the command line.
+    # Override the BigQuery table name if provided on the command line.
     if args.db:
-        settings.FIRESTORE_DB = args.db
+        settings.BIGQUERY_TABLE = args.db
 
     if not args.file_link and not args.reprocess_log:
         parser.error("Either file_link or --reprocess-log is required.")
@@ -109,6 +109,7 @@ def main():
         if reprocess.lower() == 'y':
             print(f"\nTo reprocess, run the following command:")
             print(f"uv run main.py --reprocess-log {error_log_path} --regen")
+
 
 if __name__ == "__main__":
     main()
