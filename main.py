@@ -20,7 +20,7 @@ def get_files_from_csv(csv_path, max_workers):
     Reads a CSV file of GitHub links, clones or updates the repos in parallel, 
     and returns a list of local file paths.
     """
-    clone_dir = "temp_clones"
+    clone_dir = os.environ.get("REPO_SAMPLES_DIR", "/Users/joeshirey/samples")
     if not os.path.exists(clone_dir):
         os.makedirs(clone_dir)
 
