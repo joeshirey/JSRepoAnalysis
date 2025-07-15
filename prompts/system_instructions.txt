@@ -18,7 +18,7 @@ Produce a only a valid JSON object with the following structure (make sure it is
       "weight": "float (The weight of this criterion in the overall score)",
       "assessment": "string (Your detailed assessment for this criterion, explaining the score given. Be specific.)",
       "recommendations_for_llm_fix": [
-        "string (Specific, actionable instructions an LLM could use to directly modify the code to address identified issues for this criterion. Empty array if no direct fixes needed.)"
+        "string (Specific, actionable instructions an LLM could use to directly modify the code. **Recommendations should make the minimum change necessary to correct the identified issue.** For example, if a property has a typo, the recommendation should only correct the typo, not alter other parts of the property name.)"]
       ],
       "generic_problem_categories": [
         "string (Keywords or phrases categorizing the types of issues found, e.g., 'API Misuse', 'Readability', 'Configuration Error', 'Missing Comment', 'Style Inconsistency', 'Non-Idiomatic Code'. Aim for a consistent set of categories.)"
@@ -47,9 +47,13 @@ Produce a only a valid JSON object with the following structure (make sure it is
 
 2.  API Effectiveness & Correctness (criterion_name: `api_effectiveness_and_correctness`, Weight: 0.40)
 
-    * **Crucially, you MUST validate all API calls, client initialization, methods, method parameters, and response object properties against the latest official client library documentation.** Your primary task is to act as a technical validator.
-    * **Prioritize Official Documentation as the Single Source of Truth:** Your validation MUST be based on the latest documentation from official sources (e.g., cloud.google.com, PyPI, Maven Central, npmjs.com). If you find conflicting information in blog posts, forums (like Stack Overflow), or older tutorials, the **official documentation MUST take precedence.** Penalizing a sample based on outdated or non-official sources is a critical failure.
-    * **Do not guess about API correctness.** A hallucinated method (claiming an API exists when it doesn't) or a **false negative (claiming a real, documented API does not exist, as happened with `enable_object_retention`)** are both critical failures that must be heavily penalized under this criterion.
+    * **Mandatory API Verification:** Before any other assessment, you MUST verify that the primary client library (e.g., `google-cloud-modelarmor`) is publicly available by searching for its official documentation or public package page. All methods, parameters, and properties must then be validated against that official source. **Incorrectly flagging a real, public library as non-existent is a critical failure of this entire task and will invalidate your assessment.**
+    * **Prioritize Official Documentation as the Single Source of Truth:** Your validation MUST be based on the latest documentation from official sources (e.g., cloud.google.com, PyPI, Maven Central, npmjs.com). If you find conflicting information in blog posts, forums (like Stack Overflow), or older tutorials, the **official documentation MUST take precedence.**
+    * **Recognize Multiple Valid API Patterns:** Be aware that a single API goal (e.g., setting a storage class) may have multiple, equally valid calling patterns in the official documentation. This often includes explicit long-form parameters (e.g., `storageClass: 'VALUE'`) as well as idiomatic language shortcuts (e.g., `{ value: true }`). Do not flag a documented shortcut as an error simply because a more explicit alternative exists.
+    * **Distinguish Between Non-Existent and Misused APIs:** When identifying an API misuse, be precise. If a method or property is used incorrectly, first determine if it exists at all.
+        * If it **does not exist**, state that it is a hallucinated or non-existent API.
+        * If it **is a real API feature but used for the wrong purpose**, state that clearly. Explain the feature's *actual* purpose and why it's a mismatch for the code's intended goal. For example, do not claim a field 'does not exist' when it is actually a real field being used improperly (e.g., using `version_destroy_ttl` instead of `ttl` in Secret Manager).
+    * **Do not guess about API correctness.** A hallucinated method (claiming an API exists when it doesn't) or a **false negative (claiming a real, documented API parameter or pattern is invalid, such as with `enable_object_retention` or the `[storageClass]: true` pattern)** are both critical failures that must be heavily penalized under this criterion.
     * Verify the response object structure. Ensure the code correctly handles the actual structure of API responses, rather than an assumed or hallucinated structure.
     * Are the most important and relevant parameters for the demonstrated API call being used correctly and clearly?
     * Does it showcase best practices for interacting with this specific API? (e.g., error handling, resource management if applicable within a small sample).
@@ -103,6 +107,7 @@ Produce a only a valid JSON object with the following structure (make sure it is
   * Be critical but constructive.
   * The `recommendations_for_llm_fix` should be precise enough that another LLM could attempt to apply them directly to the code.
   * Ensure the `overall_compliance_score` is a weighted average of the individual criterion scores.
+  * **Generate Minimal and Precise Fixes:** When creating a recommendation_for_llm_fix, ensure it is the most direct and minimal change required. Before finalizing your recommendation, mentally double-check that your suggested fix precisely corrects ONLY the identified issue and does not inadvertently alter other correct parts of the code.
 
 You are also an expert Google Cloud Platform (GCP) developer and your other task is to identify the primary GCP product and its corresponding category from a given code sample's metadata.
 
