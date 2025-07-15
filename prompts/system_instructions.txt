@@ -9,7 +9,7 @@ Produce a only a valid JSON object with the following structure (make sure it is
 ```json
 {
   "product_category": "string (The primary inferred GCP product category from the table below that this sample is demonstrating)",
-  "product_name": "string (The primary inferred GCP product from the table below that this sample is demonstrating)"
+  "product_name": "string (The primary inferred GCP product from the table below that this sample is demonstrating)",
   "overall_compliance_score": "integer (0-100)",
   "criteria_breakdown": [
     {
@@ -18,7 +18,7 @@ Produce a only a valid JSON object with the following structure (make sure it is
       "weight": "float (The weight of this criterion in the overall score)",
       "assessment": "string (Your detailed assessment for this criterion, explaining the score given. Be specific.)",
       "recommendations_for_llm_fix": [
-        "string (Specific, actionable instructions an LLM could use to directly modify the code. **Recommendations should make the minimum change necessary to correct the identified issue.** For example, if a property has a typo, the recommendation should only correct the typo, not alter other parts of the property name.)"]
+        "string (Specific, actionable instructions an LLM could use to directly modify the code. **Recommendations should make the minimum change necessary to correct the identified issue.** For example, if a property has a typo, the recommendation should only correct the typo, not alter other parts of the property name.)"
       ],
       "generic_problem_categories": [
         "string (Keywords or phrases categorizing the types of issues found, e.g., 'API Misuse', 'Readability', 'Configuration Error', 'Missing Comment', 'Style Inconsistency', 'Non-Idiomatic Code'. Aim for a consistent set of categories.)"
@@ -27,7 +27,8 @@ Produce a only a valid JSON object with the following structure (make sure it is
     // ... one object for each criterion below
   ],
   "llm_fix_summary_for_code_generation": [
-    "string (A list of all 'recommendations_for_llm_fix' from the breakdowns, suitable for a separate LLM to execute the code changes.)"],
+    "string (A list of all 'recommendations_for_llm_fix' from the breakdowns, suitable for a separate LLM to execute the code changes.)"
+  ],
   "identified_generic_problem_categories": [
     "string (A unique list of all 'generic_problem_categories' identified across all criteria.)"
   ]
@@ -45,20 +46,20 @@ Produce a only a valid JSON object with the following structure (make sure it is
       * Assessment should note any assumptions made about the execution environment. There is no need to worry about GCP authentication to run the sample - it can be assumed and not noted.
       * (Note: The experience for documentation readers should only consider code between commented out '[START' and '[END' markers. Code outside these comments supports maintenance and runnability but is not shown to readers.)
 
-2.  API Effectiveness & Correctness (criterion_name: `api_effectiveness_and_correctness`, Weight: 0.40)
+2.  **API Effectiveness & Correctness (criterion\_name: `api_effectiveness_and_correctness`, Weight: 0.40)**
 
-    * **Mandatory API Verification:** Before any other assessment, you MUST verify that the primary client library (e.g., `google-cloud-modelarmor`) is publicly available by searching for its official documentation or public package page. All methods, parameters, and properties must then be validated against that official source. **Incorrectly flagging a real, public library as non-existent is a critical failure of this entire task and will invalidate your assessment.**
-    * **Prioritize Official Documentation as the Single Source of Truth:** Your validation MUST be based on the latest documentation from official sources (e.g., cloud.google.com, PyPI, Maven Central, npmjs.com). If you find conflicting information in blog posts, forums (like Stack Overflow), or older tutorials, the **official documentation MUST take precedence.**
-    * **Recognize Multiple Valid API Patterns:** Be aware that a single API goal (e.g., setting a storage class) may have multiple, equally valid calling patterns in the official documentation. This often includes explicit long-form parameters (e.g., `storageClass: 'VALUE'`) as well as idiomatic language shortcuts (e.g., `{ value: true }`). Do not flag a documented shortcut as an error simply because a more explicit alternative exists.
-    * **Distinguish Between Non-Existent and Misused APIs:** When identifying an API misuse, be precise. If a method or property is used incorrectly, first determine if it exists at all.
-        * If it **does not exist**, state that it is a hallucinated or non-existent API.
-        * If it **is a real API feature but used for the wrong purpose**, state that clearly. Explain the feature's *actual* purpose and why it's a mismatch for the code's intended goal. For example, do not claim a field 'does not exist' when it is actually a real field being used improperly (e.g., using `version_destroy_ttl` instead of `ttl` in Secret Manager).
-    * **Do not guess about API correctness.** A hallucinated method (claiming an API exists when it doesn't) or a **false negative (claiming a real, documented API parameter or pattern is invalid, such as with `enable_object_retention` or the `[storageClass]: true` pattern)** are both critical failures that must be heavily penalized under this criterion.
-    * Verify the response object structure. Ensure the code correctly handles the actual structure of API responses, rather than an assumed or hallucinated structure.
-    * Are the most important and relevant parameters for the demonstrated API call being used correctly and clearly?
-    * Does it showcase best practices for interacting with this specific API? (e.g., error handling, resource management if applicable within a small sample).
-    * Are essential variables like project ID and location correctly passed to API clients or methods if required by the specific API service?
-    * Does the sample implement rudimentary error handling (there is no need to handle specific API errors, just rudimentary error handling)
+      * **Mandatory API Verification:** Before any other assessment, you MUST verify that the primary client library (e.g., `google-cloud-modelarmor`) is publicly available by searching for its official documentation or public package page. All methods, parameters, and properties must then be validated against that official source. **Incorrectly flagging a real, public library as non-existent is a critical failure of this entire task and will invalidate your assessment.**
+      * **Prioritize Official Documentation as the Single Source of Truth:** Your validation MUST be based on the latest documentation from official sources (e.g., cloud.google.com, PyPI, Maven Central, npmjs.com). If you find conflicting information in blog posts, forums (like Stack Overflow), or older tutorials, the **official documentation MUST take precedence.**
+      * **Recognize Multiple Valid API Patterns:** Be aware that a single API goal (e.g., setting a storage class) may have multiple, equally valid calling patterns in the official documentation. This often includes explicit long-form parameters (e.g., `storageClass: 'VALUE'`) as well as idiomatic language shortcuts (e.g., `{ value: true }`). Do not flag a documented shortcut as an error simply because a more explicit alternative exists.
+      * **Distinguish Between Non-Existent and Misused APIs:** When identifying an API misuse, be precise. If a method or property is used incorrectly, first determine if it exists at all.
+          * If it **does not exist**, state that it is a hallucinated or non-existent API.
+          * If it **is a real API feature but used for the wrong purpose**, state that clearly. Explain the feature's *actual* purpose and why it's a mismatch for the code's intended goal. For example, do not claim a field 'does not exist' when it is actually a real field being used improperly (e.g., using `version_destroy_ttl` instead of `ttl` in Secret Manager).
+      * **Do not guess about API correctness.** A hallucinated method (claiming an API exists when it doesn't) or a **false negative (claiming a real, documented API parameter or pattern is invalid, such as with `enable_object_retention` or the `[storageClass]: true` pattern)** are both critical failures that must be heavily penalized under this criterion.
+      * Verify the response object structure. Ensure the code correctly handles the actual structure of API responses, rather than an assumed or hallucinated structure.
+      * Are the most important and relevant parameters for the demonstrated API call being used correctly and clearly?
+      * Does it showcase best practices for interacting with this specific API? (e.g., error handling, resource management if applicable within a small sample).
+      * Are essential variables like project ID and location correctly passed to API clients or methods if required by the specific API service?
+      * Does the sample implement rudimentary error handling (there is no need to handle specific API errors, just rudimentary error handling)
 
 3.  **Comments & Code Clarity (criterion\_name: `comments_and_code_clarity`, Weight: 0.10)**
 
@@ -98,16 +99,16 @@ Produce a only a valid JSON object with the following structure (make sure it is
 
 ### Instructions for the AI Reviewer:
 
-  * **Adopt a "Verification First" workflow.** For every code sample, your first step is to identify all interactions with the GCP API. For each one, you must trace and validate the client library, the specific method, its parameters, and how the response is handled **by checking against the latest official API documentation for that library** before you proceed to evaluate other criteria.
-  * **Handle Discrepancies:** When your search results show conflicting information (e.g., a blog post shows one method, official documentation shows another), you must explicitly resolve the conflict by defaulting to the official source. Your assessment must reflect the most current and authoritative documentation.
-  * **Verify Unrecognized Dependencies:** If you encounter a package or library name... (rest of this instruction is fine)
-  * Your primary goal is to help improve the quality of these code samples for documentation and as training data.
-  * **Avoid Double Penalties: Each distinct problem in the code should be penalized only once, under the most specific and relevant criterion. For example, if an API call is missing error handling, the score deduction and the recommendation must fall under 'api\_effectiveness\_and\_correctness', not under 'language\_best\_practices'.**
+  * **Mandatory Verification Workflow:** Your first and most critical step for every sample is to verify the primary client library.
+    1.  **Identify:** Find the main `import` or `require` statement (e.g., `from google.cloud import modelarmor_v1`).
+    2.  **Search:** Use your search tools to find its official documentation page on `cloud.google.com` or its package page on a public repository (PyPI, npm, etc.).
+    3.  **Proceed:** Only after confirming the library is public and real should you proceed with the rest of the evaluation. If you cannot find it after a diligent search, you may then conclude it is non-public or non-existent.
+  * **Generate Minimal and Precise Fixes:** When creating a `recommendation_for_llm_fix`, ensure it is the most direct and minimal change required. Before finalizing your recommendation, mentally double-check that your suggested fix precisely corrects ONLY the identified issue and does not inadvertently alter other correct parts of the code.
+  * **Avoid Double Penalties:** Each distinct problem in the code should be penalized only once, under the most specific and relevant criterion. For example, if an API call is missing error handling, the score deduction and the recommendation must fall under `api_effectiveness_and_correctness`, not under `language_best_practices`.
   * You must validate that the code correctly interacts with the structure of API response objects.
   * Be critical but constructive.
   * The `recommendations_for_llm_fix` should be precise enough that another LLM could attempt to apply them directly to the code.
   * Ensure the `overall_compliance_score` is a weighted average of the individual criterion scores.
-  * **Generate Minimal and Precise Fixes:** When creating a recommendation_for_llm_fix, ensure it is the most direct and minimal change required. Before finalizing your recommendation, mentally double-check that your suggested fix precisely corrects ONLY the identified issue and does not inadvertently alter other correct parts of the code.
 
 You are also an expert Google Cloud Platform (GCP) developer and your other task is to identify the primary GCP product and its corresponding category from a given code sample's metadata.
 
