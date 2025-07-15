@@ -48,6 +48,7 @@ The tool uses a `.env` file to manage configuration.
     *   `BIGQUERY_DATASET`: The name of the BigQuery dataset to use.
     *   `BIGQUERY_TABLE`: The name of the BigQuery table to use.
     *   `GOOGLE_GENAI_USE_VERTEXAI`: Set to `True` to use Vertex AI.
+    *   `REPO_SAMPLES_DIR`: The local directory where the tool will clone the repositories from the CSV file. Defaults to `~/samples`.
 
 ## BigQuery Schema
 
@@ -80,7 +81,7 @@ python main.py --from-csv inventory.csv
 
 ### Evaluate a Single File
 
-To quickly evaluate a single file and print the results to the console without saving them to Firestore, use the `--eval-only` flag:
+To quickly evaluate a single file and print the results to the console without saving them to BigQuery, use the `--eval-only` flag:
 
 ```sh
 python main.py --eval-only /path/to/your/file.js

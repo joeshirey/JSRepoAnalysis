@@ -4,6 +4,7 @@ import logging
 import json
 import csv
 import re
+import sys
 import shutil
 import subprocess
 from datetime import datetime
@@ -20,7 +21,7 @@ def get_files_from_csv(csv_path, max_workers):
     Reads a CSV file of GitHub links, clones or updates the repos in parallel, 
     and returns a list of local file paths.
     """
-    clone_dir = os.environ.get("REPO_SAMPLES_DIR", "/Users/joeshirey/samples")
+    clone_dir = os.path.expanduser(os.environ.get("REPO_SAMPLES_DIR", "~/samples"))
     if not os.path.exists(clone_dir):
         os.makedirs(clone_dir)
 
@@ -186,10 +187,18 @@ def main():
     try:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
             futures = [executor.submit(process_file_wrapper, processor, file, args.regen, error_logger, processed_counts, skipped_counts, errored_counts) for file in files_to_process]
+            
+            processed_count = 0
+            total_files = len(files_to_process)
             for future in as_completed(futures):
+                processed_count += 1
+                progress = (processed_count / total_files) * 100
+                sys.stdout.write(f"\rProgress: {processed_count}/{total_files} files processed ({progress:.2f}%)")
+                sys.stdout.flush()
                 future.result()
     finally:
         processor.close()
+        print()  # Newline after progress bar
 
     total_processed = sum(processed_counts.values())
     total_skipped = sum(skipped_counts.values())
