@@ -89,7 +89,7 @@ def get_files_from_csv(csv_path, max_workers):
 
     return local_files
 
-def process_file_wrapper(processor, file_path, regen, error_logger, processed_counts, skipped_counts):
+def process_file_wrapper(processor, file_path, regen, error_logger, processed_counts, skipped_counts, errored_counts):
     file_extension = os.path.splitext(file_path)[1]
     strategy = get_strategy(file_path, settings)
     
@@ -105,7 +105,7 @@ def process_file_wrapper(processor, file_path, regen, error_logger, processed_co
         except Exception as e:
             logger.error(f"Error processing file {file_path}: {e}")
             error_logger.error(file_path)
-            skipped_counts[file_extension] += 1
+            errored_counts[file_extension] += 1
     else:
         logger.info(f"Skipping unsupported file type: {file_path}")
         skipped_counts[file_extension] += 1
@@ -180,23 +180,36 @@ def main():
 
     processed_counts = defaultdict(int)
     skipped_counts = defaultdict(int)
+    errored_counts = defaultdict(int)
     
     processor = CodeProcessor(settings)
     try:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = [executor.submit(process_file_wrapper, processor, file, args.regen, error_logger, processed_counts, skipped_counts) for file in files_to_process]
+            futures = [executor.submit(process_file_wrapper, processor, file, args.regen, error_logger, processed_counts, skipped_counts, errored_counts) for file in files_to_process]
             for future in as_completed(futures):
                 future.result()
     finally:
         processor.close()
 
+    total_processed = sum(processed_counts.values())
+    total_skipped = sum(skipped_counts.values())
+    total_errored = sum(errored_counts.values())
+
     logger.info("\n--- Processing Summary ---")
-    logger.info("Processed files:")
-    for ext, count in processed_counts.items():
-        logger.info(f"  {ext}: {count}")
-    logger.info("\nSkipped files:")
-    for ext, count in skipped_counts.items():
-        logger.info(f"  {ext}: {count}")
+    logger.info(f"Total files processed: {total_processed}")
+    if total_processed > 0:
+        for ext, count in sorted(processed_counts.items()):
+            logger.info(f"  - {ext if ext else 'other'}: {count}")
+    
+    logger.info(f"\nTotal files skipped: {total_skipped}")
+    if total_skipped > 0:
+        for ext, count in sorted(skipped_counts.items()):
+            logger.info(f"  - {ext if ext else 'other'}: {count}")
+
+    logger.info(f"\nTotal files errored: {total_errored}")
+    if total_errored > 0:
+        for ext, count in sorted(errored_counts.items()):
+            logger.info(f"  - {ext if ext else 'other'}: {count}")
     logger.info("------------------------\n")
 
     if args.reprocess_log:
