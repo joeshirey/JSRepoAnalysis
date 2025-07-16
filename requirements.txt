@@ -7,3 +7,5 @@ google-cloud-bigquery
 firebase_admin
 pydantic
 demjson3
+ruff
+pytest
