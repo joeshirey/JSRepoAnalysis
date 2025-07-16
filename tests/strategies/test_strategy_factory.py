@@ -1,11 +1,13 @@
 import unittest
+from unittest.mock import patch
 from config import settings
 from strategies.strategy_factory import get_strategy
 from strategies.language_strategy import LanguageStrategy
 
 
 class TestStrategyFactory(unittest.TestCase):
-    def test_get_strategy_for_supported_languages(self):
+    @patch("strategies.language_strategy.CodeEvaluator")
+    def test_get_strategy_for_supported_languages(self, mock_code_evaluator):
         test_cases = {
             "test.js": "JavaScript",
             "test.ts": "JavaScript",
