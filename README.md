@@ -6,26 +6,26 @@ This tool analyzes a local codebase of Javascript, Python, Java, Go, Rust, Ruby,
 
 For a full understanding of the project's purpose, architecture, and how to contribute, please see the documentation in the `docs/` directory:
 
-*   **[Product Requirements Document](./docs/PRODUCT_REQUIREMENTS.md)**
-*   **[Technical Design Document](./docs/TECHNICAL_DESIGN.md)**
+* **[Product Requirements Document](./docs/PRODUCT_REQUIREMENTS.md)**
+* **[Technical Design Document](./docs/TECHNICAL_DESIGN.md)**
 
 ## Setup and Installation
 
-### 1. Prerequisites
+### Prerequisites
 
-*   Python 3.9+
-*   Google Cloud SDK installed and authenticated (`gcloud auth application-default login`)
+* Python 3.9+
+* Google Cloud SDK installed and authenticated (`gcloud auth application-default login`)
 
-### 2. Clone the Repository
+### Clone the Repository
 
 ```sh
 git clone https://github.com/joeshirey/JSRepoAnalysis.git
 cd JSRepoAnalysis
 ```
 
-### 3. Install Dependencies
+### Install Dependencies
 
-It is recommended to use a Python virtual environment.
+It's recommended to use a Python virtual environment:
 
 ```sh
 python3 -m venv .venv
@@ -33,29 +33,31 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment Variables
+### Configure Environment Variables
 
-The tool uses a `.env` file to manage configuration.
+The tool uses a `.env` file to manage configuration:
 
-1.  Copy the example file:
+1. **Copy the example file:**
+
     ```sh
     cp .env.sample .env
     ```
-2.  Edit the `.env` file and provide values for the following variables:
-    *   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
-    *   `GOOGLE_CLOUD_LOCATION`: The Google Cloud region for Vertex AI (e.g., `us-central1`).
-    *   `VERTEXAI_MODEL_NAME`: The name of the Gemini model to use (e.g., `gemini-1.5-flash-001`).
-    *   `BIGQUERY_DATASET`: The name of the BigQuery dataset to use.
-    *   `BIGQUERY_TABLE`: The name of the BigQuery table to use.
-    *   `GOOGLE_GENAI_USE_VERTEXAI`: Set to `True` to use Vertex AI.
-    *   `REPO_SAMPLES_DIR`: The local directory where the tool will clone the repositories from the CSV file. Defaults to `~/samples`.
+
+2. **Edit the `.env` file** and provide values for the following:
+    * `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
+    * `GOOGLE_CLOUD_LOCATION`: The Google Cloud region for Vertex AI (e.g., `us-central1`).
+    * `VERTEXAI_MODEL_NAME`: The Gemini model to use (e.g., `gemini-1.5-flash-001`).
+    * `BIGQUERY_DATASET`: The name of your BigQuery dataset.
+    * `BIGQUERY_TABLE`: The name of your BigQuery table.
+    * `GOOGLE_GENAI_USE_VERTEXAI`: Set to `True` to use Vertex AI.
+    * `REPO_SAMPLES_DIR`: The local directory for cloning repositories from the CSV file (defaults to `~/samples`).
 
 ## BigQuery Schema
 
 The SQL definitions for the BigQuery table and the recommended analysis view are located in the `BQ/` directory.
 
-*   **`create_table.sql`**: Contains the `CREATE OR REPLACE TABLE` statement for the main data table (`repo_analysis`). This table is structured with top-level columns for efficient querying and filtering, while storing complex, nested data (like commit history and evaluation results) as `JSON`.
-*   **`create_view.sql`**: Contains the `CREATE OR REPLACE VIEW` statement for the recommended analysis view (`repo_analysis_view`). This view flattens the JSON data from the main table, unnests the evaluation criteria, and ensures that only the most recent evaluation for each file is shown, providing a simplified and reliable data source for dashboards and analysis.
+* **`create_table.sql`**: Contains the `CREATE OR REPLACE TABLE` statement for the main data table (`repo_analysis`). This table is structured with top-level columns for efficient querying and filtering, while storing complex, nested data (like commit history and evaluation results) as `JSON`.
+* **`create_view.sql`**: Contains the `CREATE OR REPLACE VIEW` statement for the recommended analysis view (`repo_analysis_view`). This view flattens the JSON data from the main table, unnests the evaluation criteria, and ensures that only the most recent evaluation for each file is shown, providing a simplified and reliable data source for dashboards and analysis.
 
 ## How to Run
 
@@ -103,23 +105,22 @@ python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other
 
 ## Command-Line Arguments
 
-*   `file_link`: (Optional) The path to the code file or directory to analyze.
-*   `--from-csv`: (Optional) The path to a CSV file with GitHub links to process.
-*   `--regen`: Forces the tool to re-analyze files and update the corresponding record in BigQuery.
-*   `--db <table_name>`: Overrides the `BIGQUERY_TABLE` environment variable.
-*   `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
-*   `--eval-only`: Analyzes a single file and prints the results to the console without saving to BigQuery.
-*   `--workers`: The number of parallel threads to use for cloning and processing.
+* `file_link`: (Optional) The path to the code file or directory to analyze.
+* `--from-csv`: (Optional) The path to a CSV file with GitHub links to process.
+* `--regen`: Forces the tool to re-analyze files and update the corresponding record in BigQuery.
+* `--db <table_name>`: Overrides the `BIGQUERY_TABLE` environment variable.
+* `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
+* `--eval-only`: Analyzes a single file and prints the results to the console without saving to BigQuery.
+* `--workers`: The number of parallel threads to use for cloning and processing.
 
 ## Project Structure
 
-*   `main.py`: The main entry point for the command-line tool.
-*   `config.py`: Manages environment variables and configuration settings.
-*   `setup.py`: The setup script for the project, used for packaging and distribution.
-*   `docs/`: Contains the Product Requirements and Technical Design documents.
-*   `strategies/`: Contains the language-specific analysis strategies.
-*   `tools/`: Contains the core logic for file processing, Git integration, and AI evaluation.
-*   `utils/`: Contains utility modules for logging, exception handling, and data classes.
-*   `prompts/`: Contains the text files used as templates for the AI evaluation prompts.
-*   `inventory.csv`: A sample CSV file for use with the `--from-csv` flag.
-*   `inventory-test.csv`, `inventory-test2.csv`, `inventory-test3.csv`, `inventory-test4.csv`: Smaller test files for development.
+* `main.py`: Main entry point for the command-line tool.
+* `config.py`: Manages environment variables and configuration.
+* `setup.py`: Setup script for packaging and distribution.
+* `docs/`: Contains Product Requirements and Technical Design documents.
+* `strategies/`: Contains language-specific analysis strategies.
+* `tools/`: Core logic for file processing, Git integration, and AI evaluation.
+* `utils/`: Utility modules for logging, exceptions, and data classes.
+* `prompts/`: Templates for AI evaluation prompts.
+* `inventory.csv`: Sample CSV file for use with the `--from-csv` flag.
