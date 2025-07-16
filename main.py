@@ -10,6 +10,7 @@ import subprocess
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
+from urllib.parse import urlparse
 from config import settings
 from tools.code_processor import CodeProcessor
 from strategies.strategy_factory import get_strategy
@@ -26,9 +27,8 @@ def get_files_from_csv(csv_path, max_workers):
         os.makedirs(clone_dir)
 
     with open(csv_path, 'r') as f:
-        reader = csv.reader(f)
-        next(reader)  # Skip header row
-        github_links = [row[2] for row in reader]
+        reader = csv.DictReader(f)
+        github_links = [row["indexed_source_url"] for row in reader]
 
     repos = set()
     for link in github_links:
@@ -78,15 +78,22 @@ def get_files_from_csv(csv_path, max_workers):
 
     local_files = []
     for link in github_links:
-        match = re.search(r"https://github.com/([^/]+/[^/]+)/blob/[^/]+/(.+)", link)
-        if match:
-            repo_name, file_path = match.groups()
-            file_path = file_path.split('#')[0]
-            local_path = os.path.join(clone_dir, repo_name, file_path)
+        try:
+            parsed_url = urlparse(link)
+            path_parts = parsed_url.path.strip('/').split('/')
+            owner, repo_name = path_parts[0], path_parts[1]
+            file_path = '/'.join(path_parts[4:])
+            
+            local_path = os.path.join(clone_dir, owner, repo_name, file_path)
             if os.path.exists(local_path):
                 local_files.append(local_path)
             else:
                 logger.warning(f"File not found after cloning: {local_path}")
+        except IndexError:
+            logger.error(f"Could not parse owner, repo, or file path from URL: {link}")
+        except Exception as e:
+            logger.error(f"An unexpected error occurred while parsing URL {link}: {e}")
+
 
     return local_files
 

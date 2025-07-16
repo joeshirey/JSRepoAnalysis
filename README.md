@@ -77,6 +77,8 @@ python main.py /path/to/your/directory/
 
 To analyze a list of files from a CSV, use the `--from-csv` flag. The tool will clone the repositories if they don't exist, or pull the latest changes if they do. It now automatically detects the default branch of each repository.
 
+The CSV file must contain a header row and at least one column named `indexed_source_url`, which should contain the full GitHub URL to the file.
+
 ```sh
 python main.py --from-csv inventory.csv
 ```
@@ -123,4 +125,4 @@ python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other
 * `tools/`: Core logic for file processing, Git integration, and AI evaluation.
 * `utils/`: Utility modules for logging, exceptions, and data classes.
 * `prompts/`: Templates for AI evaluation prompts.
-* `inventory.csv`: Sample CSV file for use with the `--from-csv` flag.
+* `inventory.csv`: Sample CSV file for use with the `--from-csv` flag. It must contain a header and a column named `indexed_source_url`.
