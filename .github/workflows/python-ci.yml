@@ -27,6 +27,13 @@ jobs:
       run: |
         ruff check . --fix
     - name: Test with pytest
+      env:
+        GOOGLE_CLOUD_PROJECT: "test-project"
+        GOOGLE_CLOUD_LOCATION: "test-location"
+        VERTEXAI_MODEL_NAME: "test-model"
+        FIRESTORE_DB: "test-db"
+        BIGQUERY_DATASET: "test-dataset"
+        BIGQUERY_TABLE: "test-table"
       run: |
         export PYTHONPATH=.
         pytest
