@@ -1,8 +1,8 @@
-import os
 from google.cloud import bigquery
 from typing import Dict, Any
 from utils.logger import logger
 from utils.exceptions import BigQueryError
+
 
 class BigQueryRepository:
     def __init__(self, config):
@@ -21,7 +21,9 @@ class BigQueryRepository:
         try:
             errors = self._db.insert_rows_json(self.table_id, [row_payload])
             if not errors:
-                logger.info(f"Successfully wrote document to BigQuery table '{self.table_id}'.")
+                logger.info(
+                    f"Successfully wrote document to BigQuery table '{self.table_id}'."
+                )
             else:
                 raise BigQueryError(f"Error writing document to BigQuery: {errors}")
         except Exception as e:
@@ -69,7 +71,9 @@ class BigQueryRepository:
             )
             query_job = self._db.query(query, job_config=job_config)
             query_job.result()  # Wait for the job to complete
-            logger.info(f"Successfully deleted record for '{github_link}' with last_updated date '{last_updated}' from BigQuery.")
+            logger.info(
+                f"Successfully deleted record for '{github_link}' with last_updated date '{last_updated}' from BigQuery."
+            )
         except Exception as e:
             raise BigQueryError(f"Error deleting from BigQuery: {e}")
 

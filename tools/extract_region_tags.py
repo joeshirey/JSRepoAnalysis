@@ -1,9 +1,8 @@
-
 from .base_tool import BaseTool
 import re
 import sys
-from utils.logger import logger
 from utils.exceptions import RegionTagError
+
 
 class RegionTagExtractor(BaseTool):
     def execute(self, file_path):
@@ -15,10 +14,12 @@ class RegionTagExtractor(BaseTool):
             if file_path == "-":
                 file = sys.stdin
             else:
-                file = open(file_path, 'r', encoding='utf-8')
+                file = open(file_path, "r", encoding="utf-8")
             with file:
                 for line in file:
-                    for match in re.finditer(r'(?:#|\/\/)\s*\[(START|END)\s+(.+?)\]', line):
+                    for match in re.finditer(
+                        r"(?:#|\/\/)\s*\[(START|END)\s+(.+?)\]", line
+                    ):
                         region_tag = match.group(2).strip()
                         region_tags.add(region_tag)
         except FileNotFoundError:

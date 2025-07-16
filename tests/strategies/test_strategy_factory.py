@@ -3,8 +3,8 @@ from config import settings
 from strategies.strategy_factory import get_strategy
 from strategies.language_strategy import LanguageStrategy
 
-class TestStrategyFactory(unittest.TestCase):
 
+class TestStrategyFactory(unittest.TestCase):
     def test_get_strategy_for_supported_languages(self):
         test_cases = {
             "test.js": "JavaScript",
@@ -31,5 +31,6 @@ class TestStrategyFactory(unittest.TestCase):
         strategy = get_strategy("test.txt", settings)
         self.assertIsNone(strategy)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

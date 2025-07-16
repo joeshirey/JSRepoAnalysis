@@ -1,11 +1,10 @@
 from .base_tool import BaseTool
-import os
 import json
 from google import genai
 from google.genai import types
 from google.genai.types import Tool, GoogleSearch
-from utils.logger import logger
 from utils.exceptions import CodeEvaluatorError
+
 
 class CodeEvaluator(BaseTool):
     def __init__(self, config):
@@ -22,7 +21,7 @@ class CodeEvaluator(BaseTool):
         Evaluates code using the Gemini 2.5 Flash model on Vertex AI.
         """
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 code = file.read()
         except FileNotFoundError:
             raise CodeEvaluatorError(f"File not found at path: {file_path}")
@@ -39,7 +38,13 @@ class CodeEvaluator(BaseTool):
             raise CodeEvaluatorError(f"Error reading prompt file: {e}")
 
         # Inject code into prompt
-        prompt = self._fill_prompt_placeholders(prompt_template_string=prompt_template, language=language, code_sample=code, github_link=github_link, region_tag=region_tag)
+        prompt = self._fill_prompt_placeholders(
+            prompt_template_string=prompt_template,
+            language=language,
+            code_sample=code,
+            github_link=github_link,
+            region_tag=region_tag,
+        )
 
         # Configure generation parameters for the first call with grounding.
         grounding_tool = Tool(google_search=GoogleSearch())
@@ -51,7 +56,6 @@ class CodeEvaluator(BaseTool):
         )
 
         try:
-            
             response = self.client.models.generate_content(
                 model=self.config.VERTEXAI_MODEL_NAME,
                 contents=prompt,
@@ -83,14 +87,20 @@ class CodeEvaluator(BaseTool):
             response = self.client.models.generate_content(
                 model=self.config.VERTEXAI_MODEL_NAME,
                 contents=json_prompt,
-                config=json_generation_config
+                config=json_generation_config,
             )
             return response.text
         except Exception as e:
             raise CodeEvaluatorError(f"Error converting analysis to JSON: {e}")
 
-
-    def _fill_prompt_placeholders(self, prompt_template_string: str, language: str, code_sample: str, github_link: str, region_tag: str) -> str:
+    def _fill_prompt_placeholders(
+        self,
+        prompt_template_string: str,
+        language: str,
+        code_sample: str,
+        github_link: str,
+        region_tag: str,
+    ) -> str:
         """
         Replaces placeholders in an existing prompt template string.
         """
@@ -98,5 +108,7 @@ class CodeEvaluator(BaseTool):
         prompt = f"**LANGUAGE:**\n{language}\n\n"
         prompt += f"**URI:**\n{github_link}\n\n"
         prompt += f"**Region Tag ID:**\n{region_tag}\n\n"
-        prompt += f"**CODE_SAMPLE:**\n```{language_lowercase}\n{json.dumps(code_sample)}\n```"
+        prompt += (
+            f"**CODE_SAMPLE:**\n```{language_lowercase}\n{json.dumps(code_sample)}\n```"
+        )
         return prompt

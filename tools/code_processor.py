@@ -1,5 +1,4 @@
 import json
-import os
 import re
 import demjson3
 from datetime import datetime
@@ -8,9 +7,14 @@ from tools.extract_region_tags import RegionTagExtractor
 from tools.bigquery import BigQueryRepository
 from strategies.strategy_factory import get_strategy
 from utils.logger import logger
-from utils.exceptions import UnsupportedFileTypeError, GitRepositoryError, NoRegionTagsError
+from utils.exceptions import (
+    UnsupportedFileTypeError,
+    GitRepositoryError,
+    NoRegionTagsError,
+)
 from utils.data_classes import AnalysisResult
 from dataclasses import asdict
+
 
 class CodeProcessor:
     def __init__(self, settings):
@@ -31,42 +35,52 @@ class CodeProcessor:
             raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")
 
         git_info = self._get_git_info(file_path)
-        
+
         if regen:
-            logger.info(f"Regen is true, deleting existing records for {git_info['github_link']}")
+            logger.info(
+                f"Regen is true, deleting existing records for {git_info['github_link']}"
+            )
             self.bigquery_repo.delete(git_info["github_link"], git_info["last_updated"])
         elif self._is_already_processed(git_info):
             logger.info(f"{file_path} already processed and up-to-date, skipping.")
             return "skipped"
 
         analysis_result = self._analyze_file(file_path, strategy, git_info)
-        
-        bigquery_row = self._build_bigquery_row(analysis_result, strategy.language, file_path)
+
+        bigquery_row = self._build_bigquery_row(
+            analysis_result, strategy.language, file_path
+        )
         self._save_result(bigquery_row)
         return "processed"
 
     def _is_already_processed(self, git_info):
         github_link = git_info["github_link"]
         last_updated = git_info.get("last_updated")
-        
+
         # Convert last_updated string to date object if it's not None
         if last_updated:
-            last_updated_dt = datetime.strptime(last_updated, '%Y-%m-%d').date()
+            last_updated_dt = datetime.strptime(last_updated, "%Y-%m-%d").date()
         else:
             last_updated_dt = None
 
         existing_record = self.bigquery_repo.read(github_link)
-        
-        if existing_record and 'last_updated' in existing_record and existing_record['last_updated']:
+
+        if (
+            existing_record
+            and "last_updated" in existing_record
+            and existing_record["last_updated"]
+        ):
             # Ensure existing_record['last_updated'] is a date object for comparison
-            if isinstance(existing_record['last_updated'], datetime):
-                existing_last_updated_dt = existing_record['last_updated'].date()
+            if isinstance(existing_record["last_updated"], datetime):
+                existing_last_updated_dt = existing_record["last_updated"].date()
             else:
                 # Assuming it's a string in 'YYYY-MM-DD' format
-                existing_last_updated_dt = datetime.strptime(str(existing_record['last_updated']), '%Y-%m-%d').date()
-            
+                existing_last_updated_dt = datetime.strptime(
+                    str(existing_record["last_updated"]), "%Y-%m-%d"
+                ).date()
+
             return existing_last_updated_dt == last_updated_dt
-        
+
         return False
 
     def _get_git_info(self, file_path):
@@ -103,19 +117,21 @@ class CodeProcessor:
         if not region_tags:
             raise NoRegionTagsError("File not analyzed, no region tags")
 
-        evaluation_data = self._evaluate_code(strategy, file_path, region_tags[0], git_info["github_link"])
+        evaluation_data = self._evaluate_code(
+            strategy, file_path, region_tags[0], git_info["github_link"]
+        )
         raw_code = self._read_raw_code(file_path)
 
         return AnalysisResult(
             git_info=git_info,
             region_tags=region_tags,
             evaluation_data=evaluation_data,
-            raw_code=raw_code
+            raw_code=raw_code,
         )
 
     def _evaluate_code(self, strategy, file_path, region_tag, github_link):
         style_info = strategy.evaluate_code(file_path, region_tag, github_link)
-        
+
         match = re.search(r"```json\s*({.*})\s*```", style_info, re.DOTALL)
         if match:
             cleaned_text = match.group(1)
@@ -123,11 +139,13 @@ class CodeProcessor:
             cleaned_text = style_info.strip()
 
         cleaned_text = re.sub(r",\s*([\]}])", r"\1", cleaned_text)
-        
+
         try:
             return json.loads(cleaned_text)
         except json.JSONDecodeError as e:
-            logger.warning(f"Initial JSON parsing failed: {e}. Attempting to fix with lenient parser.")
+            logger.warning(
+                f"Initial JSON parsing failed: {e}. Attempting to fix with lenient parser."
+            )
             try:
                 return demjson3.decode(cleaned_text)
             except demjson3.JSONDecodeError as e2:
@@ -137,7 +155,7 @@ class CodeProcessor:
 
     def _read_raw_code(self, file_path):
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 return f.read()
         except Exception as e:
             return f"Error reading file: {e}"

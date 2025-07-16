@@ -20,9 +20,12 @@ jobs:
       run: |
         pip install uv
         uv pip install -r requirements.txt --system
+    - name: Format with ruff
+      run: |
+        ruff format .
     - name: Lint with ruff
       run: |
-        ruff check .
+        ruff check . --fix
     - name: Test with pytest
       run: |
         export PYTHONPATH=.
