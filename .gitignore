@@ -182,3 +182,4 @@ errors.log
 .vscode/
 /scratch
 temp_clones/
+/*.csv
