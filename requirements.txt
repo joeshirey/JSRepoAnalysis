@@ -9,3 +9,4 @@ pydantic
 demjson3
 ruff
 pytest
+pydantic-settings
