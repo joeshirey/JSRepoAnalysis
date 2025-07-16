@@ -104,9 +104,12 @@ def process_file_wrapper(processor, file_path, regen, error_logger, processed_co
     if strategy:
         try:
             logger.info(f"Processing file: {file_path}")
-            processor.process_file(file_path, regen=regen)
-            processed_counts[file_extension] += 1
-            logger.info(f"Finished processing file: {file_path}")
+            status = processor.process_file(file_path, regen=regen)
+            if status == "processed":
+                processed_counts[file_extension] += 1
+                logger.info(f"Finished processing file: {file_path}")
+            elif status == "skipped":
+                skipped_counts[file_extension] += 1
         except NoRegionTagsError as e:
             logger.info(f"Skipping file {file_path}: {e}")
             skipped_counts[file_extension] += 1

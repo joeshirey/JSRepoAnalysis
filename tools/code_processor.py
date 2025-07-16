@@ -37,12 +37,13 @@ class CodeProcessor:
             self.bigquery_repo.delete(git_info["github_link"], git_info["last_updated"])
         elif self._is_already_processed(git_info):
             logger.info(f"{file_path} already processed and up-to-date, skipping.")
-            return
+            return "skipped"
 
         analysis_result = self._analyze_file(file_path, strategy, git_info)
         
         bigquery_row = self._build_bigquery_row(analysis_result, strategy.language, file_path)
         self._save_result(bigquery_row)
+        return "processed"
 
     def _is_already_processed(self, git_info):
         github_link = git_info["github_link"]

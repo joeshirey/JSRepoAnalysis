@@ -7,8 +7,8 @@ class TestStrategyFactory(unittest.TestCase):
 
     def test_get_strategy_for_supported_languages(self):
         test_cases = {
-            "test.js": "Javascript",
-            "test.ts": "Typescript",
+            "test.js": "JavaScript",
+            "test.ts": "JavaScript",
             "test.py": "Python",
             "test.java": "Java",
             "test.go": "Go",
