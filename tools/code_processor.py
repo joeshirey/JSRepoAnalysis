@@ -5,6 +5,7 @@ from datetime import datetime
 from tools.git_file_processor import GitFileProcessor
 from tools.extract_region_tags import RegionTagExtractor
 from tools.bigquery import BigQueryRepository
+from tools.extract_product_info import categorize_sample
 from strategies.strategy_factory import get_strategy
 from utils.logger import logger
 from utils.exceptions import (
@@ -117,10 +118,24 @@ class CodeProcessor:
         if not region_tags:
             raise NoRegionTagsError("File not analyzed, no region tags")
 
+        # First, evaluate the code as before to get the LLM's analysis
         evaluation_data = self._evaluate_code(
             strategy, file_path, region_tags[0], git_info["github_link"]
         )
         raw_code = self._read_raw_code(file_path)
+
+        # Now, use the new, more reliable product categorization logic
+        row_data = {
+            'indexed_source_url': git_info.get("github_link"),
+            'region_tag': region_tags[0] if region_tags else "",
+            'repository_name': git_info.get("github_repo")
+        }
+        product_category, product_name = categorize_sample(row_data, raw_code)
+
+        # Update the evaluation data with the new product info, overwriting
+        # whatever the LLM might have provided for these specific fields.
+        evaluation_data['product_category'] = product_category
+        evaluation_data['product_name'] = product_name
 
         return AnalysisResult(
             git_info=git_info,

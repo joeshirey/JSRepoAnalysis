@@ -1,0 +1,202 @@
+- category: AI and Machine Learning
+  products:
+    - product: Vertex AI
+      keywords: [vertex-ai, vertexai, aiplatform, gemini, imagen, gemma, cmle]
+    - product: Natural Language API
+      keywords: [language, naturallanguage]
+    - product: Translation API
+      keywords: [translate]
+    - product: Vision AI
+      keywords: [vision, visualinspection]
+    - product: Video Intelligence API
+      keywords: [video-intelligence, videointelligence]
+    - product: Speech-to-Text
+      keywords: [speech]
+    - product: Text-to-Speech
+      keywords: [tts, texttospeech]
+    - product: AutoML
+      keywords: [automl]
+    - product: Contact Center AI
+      keywords: [contact-center-ai, contactcenterinsights]
+    - product: Document AI
+      keywords: [document-ai, documentai]
+    - product: Talent Solution
+      keywords: [jobs, talent]
+    - product: Model Armor
+      keywords: [model-armor, modelarmor]
+    - product: Vertex AI Search
+      keywords: [search-ai, vertex-ai-search] # Added based on ORDERED_PRODUCTS
+
+- category: API Management
+  products:
+    - product: Apigee
+      keywords: [apigee]
+    - product: Endpoints
+      keywords: [endpoints]
+
+- category: Compute
+  products:
+    - product: App Engine
+      keywords: [appengine, \bgae\b]
+    - product: Cloud Functions
+      keywords: [functions]
+    - product: Cloud Run
+      keywords: [run]
+    - product: Cloud TPU
+      keywords: [tpu]
+    - product: Compute Engine
+      keywords: [compute, \bgce\b, vm_instance]
+    - product: Batch
+      keywords: [batch]
+
+- category: Containers
+  products:
+    - product: Google Kubernetes Engine (GKE)
+      keywords: [gke, kubernetes-engine, container]
+
+- category: Databases
+  products:
+    - product: AlloyDB
+      keywords: [alloydb]
+    - product: Bigtable
+      keywords: [bigtable]
+    - product: Cloud SQL
+      keywords: [cloud-sql, cloudsql]
+    - product: Datastore
+      keywords: [datastore]
+    - product: Firestore
+      keywords: [firestore]
+    - product: Spanner
+      keywords: [spanner]
+    - product: Memorystore
+      keywords: [memorystore]
+
+- category: Data Analytics
+  products:
+    - product: BigQuery
+      keywords: [bigquery, bqml]
+    - product: BigLake
+      keywords: [biglake]
+    - product: Composer
+      keywords: [composer]
+    - product: Dataflow
+      keywords: [dataflow]
+    - product: Dataproc
+      keywords: [dataproc]
+    - product: Looker
+      keywords: [looker]
+    - product: Pub/Sub
+      keywords: [pubsub]
+    - product: BigQuery Migration
+      keywords: [bigquery-migration] # Placeholder
+    - product: BigQuery Data Transfer
+      keywords: [bigquery-data-transfer] # Placeholder
+    - product: BigQuery Reservation
+      keywords: [bigquery-reservation] # Placeholder
+    - product: BigQuery Connection
+      keywords: [bigquery-connection] # Placeholder
+
+- category: Developer Tools
+  products:
+    - product: Artifact Registry
+      keywords: [artifact-registry, artifactregistry]
+    - product: Cloud Build
+      keywords: [cloud-build, cloudbuild]
+    - product: Cloud Scheduler
+      keywords: [cloud-scheduler, cloudscheduler]
+    - product: Cloud Tasks
+      keywords: [cloud-tasks, tasks]
+    - product: Container Analysis
+      keywords: [container-analysis, containeranalysis]
+
+- category: Management & Observability
+  products:
+    - product: Cloud Asset Inventory
+      keywords: [asset]
+    - product: Cloud Logging
+      keywords: [logging]
+    - product: Cloud Monitoring
+      keywords: [monitoring]
+    - product: Cloud Profiler
+      keywords: [profiler]
+    - product: Cloud Trace
+      keywords: [trace, opencensus, opentelemetry]
+    - product: Error Reporting
+      keywords: [error-reporting, errorreporting]
+    - product: Parameter Manager
+      keywords: [parametermanager]
+
+- category: Networking
+  products:
+    - product: Cloud CDN
+      keywords: [cdn]
+    - product: Cloud DNS
+      keywords: [dns]
+    - product: Cloud NAT
+      keywords: [cloud-nat]
+    - product: Cloud Router
+      keywords: [cloud-router]
+    - product: Cloud VPN
+      keywords: [vpn]
+    - product: Connect Gateway
+      keywords: [connectgateway]
+    - product: Media CDN
+      keywords: [media-cdn, mediacdn]
+    - product: Network Connectivity Center
+      keywords: [network-connectivity]
+    - product: Service Directory
+      keywords: [service-directory, servicedirectory]
+    - product: Traffic Director
+      keywords: [traffic-director]
+    - product: Virtual Private Cloud (VPC)
+      keywords: [vpc]
+
+- category: Security and Identity
+  products:
+    - product: Access Approval
+      keywords: [accessapproval]
+    - product: Identity and Access Management (IAM)
+      keywords: [iam]
+    - product: Identity-Aware Proxy (IAP)
+      keywords: [iap]
+    - product: Key Management Service (KMS)
+      keywords: [kms]
+    - product: Private Certificate Authority
+      keywords: [privateca]
+    - product: reCAPTCHA Enterprise
+      keywords: [recaptcha]
+    - product: Secret Manager
+      keywords: [secret-manager, secretmanager]
+    - product: Security Command Center
+      keywords: [security-command-center, securitycenter]
+    - product: Web Risk
+      keywords: [webrisk]
+    - product: Web Security Scanner
+      keywords: [web-security-scanner]
+
+- category: Storage
+  products:
+    - product: Cloud Storage
+      keywords: [storage]
+    - product: Filestore
+      keywords: [filestore]
+    - product: Persistent Disk
+      keywords: [persistent-disk]
+    - product: Storage Transfer Service
+      keywords: [storagetransfer]
+    - product: Storage Insights
+      keywords: [storage-insights] # Placeholder
+    - product: Storage Control
+      keywords: [storage-control] # Placeholder
+
+- category: Hybrid and Multicloud
+  products:
+    - product: Anthos
+      keywords: [anthos, servicemesh, gkeonaws]
+
+- category: Other Services
+  products:
+    - product: Google Analytics Data API
+      keywords: [analyticsdata]
+    - product: Workflows
+      keywords: [workflows]

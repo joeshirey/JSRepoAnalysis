@@ -10,3 +10,4 @@ demjson3
 ruff
 pytest
 pydantic-settings
+PyYAML

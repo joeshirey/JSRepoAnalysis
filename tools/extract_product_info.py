@@ -1,132 +1,59 @@
 import re
+import os
+import yaml
 from collections import OrderedDict
+
 # You will need to install your preferred LLM library, e.g.:
 # pip install --upgrade google-cloud-aiplatform
 # from vertexai.generative_models import GenerativeModel
 
 # ==============================================================================
-# 1. THE HIERARCHY AND KEYWORD MAPPING (BRAIN OF THE RULES ENGINE)
+# 1. THE HIERARCHY AND KEYWORD MAPPING (LOADED FROM YAML)
 # ==============================================================================
-# This dictionary maps keywords to their official product category and name.
-# Keywords are lowercase for case-insensitive matching.
 
-PRODUCT_HIERARCHY = {
-    # AI and Machine Learning
-    ('AI and Machine Learning', 'Vertex AI'): ['vertex-ai', 'vertexai', 'aiplatform', 'gemini', 'imagen', 'gemma', 'cmle'],
-    ('AI and Machine Learning', 'Natural Language API'): ['language', 'naturallanguage'],
-    ('AI and Machine Learning', 'Translation API'): ['translate'],
-    ('AI and Machine Learning', 'Vision AI'): ['vision', 'visualinspection'],
-    ('AI and Machine Learning', 'Video Intelligence API'): ['video-intelligence', 'videointelligence'],
-    ('AI and Machine Learning', 'Speech-to-Text'): ['speech'],
-    ('AI and Machine Learning', 'Text-to-Speech'): ['tts', 'texttospeech'],
-    ('AI and Machine Learning', 'AutoML'): ['automl'],
-    ('AI and Machine Learning', 'Contact Center AI'): ['contact-center-ai', 'contactcenterinsights'],
-    ('AI and Machine Learning', 'Document AI'): ['document-ai', 'documentai'],
-    ('AI and Machine Learning', 'Talent Solution'): ['jobs', 'talent'],
-    ('AI and Machine Learning', 'Model Armor'): ['model-armor', 'modelarmor'],
+def _load_product_config():
+    """Loads the product hierarchy and keywords from an external YAML file."""
+    hierarchy = {}
+    ordered_products = [
+        # This list defines a specific priority order for matching.
+        # Products here will be checked before any others.
+        ('Data Analytics', 'BigQuery Migration'),
+        ('Data Analytics', 'BigQuery Data Transfer'),
+        ('Data Analytics', 'BigQuery Reservation'),
+        ('Data Analytics', 'BigQuery Connection'),
+        ('Databases', 'Cloud SQL'),
+        ('Storage', 'Storage Transfer Service'),
+        ('Storage', 'Storage Insights'),
+        ('Storage', 'Storage Control'),
+        ('AI and Machine Learning', 'Vertex AI Search'),
+    ]
+    
+    # Construct the full path to the YAML file relative to this script
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    yaml_path = os.path.join(current_dir, 'product_hierarchy.yaml')
 
-    # API Management
-    ('API Management', 'Apigee'): ['apigee'],
-    ('API Management', 'Endpoints'): ['endpoints'],
+    with open(yaml_path, 'r') as f:
+        product_config = yaml.safe_load(f)
 
-    # Compute
-    ('Compute', 'App Engine'): ['appengine', r'\bgae\b'],
-    ('Compute', 'Cloud Functions'): ['functions'],
-    ('Compute', 'Cloud Run'): ['run'],
-    ('Compute', 'Cloud TPU'): ['tpu'],
-    ('Compute', 'Compute Engine'): ['compute', r'\bgce\b', 'vm_instance'],
-    ('Containers', 'Google Kubernetes Engine (GKE)'): ['gke', 'kubernetes-engine', 'container'],
-    ('Compute', 'Batch'): ['batch'],
+    all_products_from_yaml = []
+    for category_info in product_config:
+        category_name = category_info['category']
+        for product_info in category_info['products']:
+            product_name = product_info['product']
+            key = (category_name, product_name)
+            hierarchy[key] = product_info.get('keywords', [])
+            all_products_from_yaml.append(key)
 
-    # Databases
-    ('Databases', 'AlloyDB'): ['alloydb'],
-    ('Databases', 'Bigtable'): ['bigtable'],
-    ('Databases', 'Cloud SQL'): ['cloud-sql', 'cloudsql'],
-    ('Databases', 'Datastore'): ['datastore'],
-    ('Databases', 'Firestore'): ['firestore'],
-    ('Databases', 'Spanner'): ['spanner'],
-    ('Databases', 'Memorystore'): ['memorystore'],
+    # Add the remaining products from YAML, ensuring no duplicates and preserving priority
+    for product in all_products_from_yaml:
+        if product not in ordered_products:
+            ordered_products.append(product)
+            
+    return hierarchy, ordered_products
 
-    # Data Analytics
-    ('Data Analytics', 'BigQuery'): ['bigquery', 'bqml'],
-    ('Data Analytics', 'BigLake'): ['biglake'],
-    ('Data Analytics', 'Composer'): ['composer'],
-    ('Data Analytics', 'Dataflow'): ['dataflow'],
-    ('Data Analytics', 'Dataproc'): ['dataproc'],
-    ('Data Analytics', 'Looker'): ['looker'],
-    ('Data Analytics', 'Pub/Sub'): ['pubsub'],
+# Load the configuration once when the module is imported
+PRODUCT_HIERARCHY, ORDERED_PRODUCTS = _load_product_config()
 
-    # Developer Tools
-    ('Developer Tools', 'Artifact Registry'): ['artifact-registry', 'artifactregistry'],
-    ('Developer Tools', 'Cloud Build'): ['cloud-build', 'cloudbuild'],
-    ('Developer Tools', 'Cloud Scheduler'): ['cloud-scheduler', 'cloudscheduler'],
-    ('Developer Tools', 'Cloud Tasks'): ['cloud-tasks', 'tasks'],
-    ('Developer Tools', 'Container Analysis'): ['container-analysis', 'containeranalysis'],
-
-    # Management & Observability
-    ('Management & Observability', 'Cloud Asset Inventory'): ['asset'],
-    ('Management & Observability', 'Cloud Logging'): ['logging'],
-    ('Management & Observability', 'Cloud Monitoring'): ['monitoring'],
-    ('Management & Observability', 'Cloud Profiler'): ['profiler'],
-    ('Management & Observability', 'Cloud Trace'): ['trace', 'opencensus', 'opentelemetry'],
-    ('Management & Observability', 'Error Reporting'): ['error-reporting', 'errorreporting'],
-    ('Management & Observability', 'Parameter Manager'): ['parametermanager'],
-
-    # Networking
-    ('Networking', 'Cloud CDN'): ['cdn'],
-    ('Networking', 'Cloud DNS'): ['dns'],
-    ('Networking', 'Cloud NAT'): ['cloud-nat'],
-    ('Networking', 'Cloud Router'): ['cloud-router'],
-    ('Networking', 'Cloud VPN'): ['vpn'],
-    ('Networking', 'Connect Gateway'): ['connectgateway'],
-    ('Networking', 'Media CDN'): ['media-cdn', 'mediacdn'],
-    ('Networking', 'Network Connectivity Center'): ['network-connectivity'],
-    ('Networking', 'Service Directory'): ['service-directory', 'servicedirectory'],
-    ('Networking', 'Traffic Director'): ['traffic-director'],
-    ('Networking', 'Virtual Private Cloud (VPC)'): ['vpc'],
-
-    # Security and Identity
-    ('Security and Identity', 'Access Approval'): ['accessapproval'],
-    ('Security and Identity', 'Identity and Access Management (IAM)'): ['iam'],
-    ('Security and Identity', 'Identity-Aware Proxy (IAP)'): ['iap'],
-    ('Security and Identity', 'Key Management Service (KMS)'): ['kms'],
-    ('Security and Identity', 'Private Certificate Authority'): ['privateca'],
-    ('Security and Identity', 'reCAPTCHA Enterprise'): ['recaptcha'],
-    ('Security and Identity', 'Secret Manager'): ['secret-manager', 'secretmanager'],
-    ('Security and Identity', 'Security Command Center'): ['security-command-center', 'securitycenter'],
-    ('Security and Identity', 'Web Risk'): ['webrisk'],
-    ('Security and Identity', 'Web Security Scanner'): ['web-security-scanner'],
-
-    # Storage
-    ('Storage', 'Cloud Storage'): ['storage'],
-    ('Storage', 'Filestore'): ['filestore'],
-    ('Storage', 'Persistent Disk'): ['persistent-disk'],
-    ('Storage', 'Storage Transfer Service'): ['storagetransfer'],
-
-    # Hybrid and Multicloud
-    ('Hybrid and Multicloud', 'Anthos'): ['anthos', 'servicemesh', 'gkeonaws'],
-
-    # Other Services
-    ('Other Services', 'Google Analytics Data API'): ['analyticsdata'],
-    ('Other Services', 'Workflows'): ['workflows'],
-}
-
-# Ordered list to check for specific products before general ones.
-ORDERED_PRODUCTS = [
-    ('Data Analytics', 'BigQuery Migration'),
-    ('Data Analytics', 'BigQuery Data Transfer'),
-    ('Data Analytics', 'BigQuery Reservation'),
-    ('Data Analytics', 'BigQuery Connection'),
-    ('Databases', 'Cloud SQL'),
-    ('Storage', 'Storage Transfer Service'),
-    ('Storage', 'Storage Insights'),
-    ('Storage', 'Storage Control'),
-    ('AI and Machine Learning', 'Vertex AI Search'),
-]
-all_products = list(PRODUCT_HIERARCHY.keys())
-for product in all_products:
-    if product not in ORDERED_PRODUCTS:
-        ORDERED_PRODUCTS.append(product)
 
 # ==============================================================================
 # 2. HELPER FUNCTIONS
