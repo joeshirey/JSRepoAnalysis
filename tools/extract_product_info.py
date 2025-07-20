@@ -3,6 +3,7 @@ import os
 import yaml
 import json
 from collections import OrderedDict
+from typing import Optional
 from config import settings
 from google import genai
 from google.genai import types
@@ -59,7 +60,7 @@ PRODUCT_HIERARCHY, ORDERED_PRODUCTS = _load_product_config()
 # 2. HELPER FUNCTIONS
 # ==============================================================================
 
-def _find_product_by_rules(search_string: str) -> tuple[str, str] or None:
+def _find_product_by_rules(search_string: str) -> Optional[tuple[str, str]]:
     """Iterates through the ordered list of products to find the first keyword match."""
     if not isinstance(search_string, str):
         return None
