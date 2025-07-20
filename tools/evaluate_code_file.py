@@ -1,6 +1,5 @@
 from .base_tool import BaseTool
 import json
-import re
 from google import genai
 from google.genai import types
 from google.genai.types import Tool, GoogleSearch
@@ -56,7 +55,6 @@ class CodeEvaluator(BaseTool):
             tools=[grounding_tool],
         )
 
-        citation_sources = []
         try:
             response = self.client.models.generate_content(
                 model=self.config.VERTEXAI_MODEL_NAME,
@@ -64,11 +62,6 @@ class CodeEvaluator(BaseTool):
                 config=grounding_generation_config,
             )
             analysis_text = response.text
-            if hasattr(response, "citation_metadata") and response.citation_metadata:
-                for source in response.citation_metadata.citation_sources:
-                    if source.uri:
-                        citation_sources.append(source.uri)
-
         except Exception as e:
             raise CodeEvaluatorError(f"Error generating content from Vertex AI: {e}")
 
@@ -83,15 +76,6 @@ class CodeEvaluator(BaseTool):
 
         json_prompt = json_prompt_template.replace("{{text}}", analysis_text)
 
-        if citation_sources:
-            references_json_string = json.dumps(citation_sources)
-            json_prompt += f"""
-\n**Additional Instructions:**
-6.  The JSON object MUST also include a top-level key named `references`.
-7.  The value for the `references` key MUST be the following JSON array of strings:
-    {references_json_string}
-"""
-
         # Configure generation parameters for the second call without grounding.
         json_generation_config = types.GenerateContentConfig(
             temperature=0.0,
@@ -105,29 +89,9 @@ class CodeEvaluator(BaseTool):
                 contents=json_prompt,
                 config=json_generation_config,
             )
-            # Parse the JSON string from the model
-            evaluation_dict = json.loads(response.text)
-            
-            # Add references if they exist
-            if citation_sources:
-                evaluation_dict['references'] = citation_sources
-            
-            return evaluation_dict
-        except (json.JSONDecodeError, Exception) as e:
-            # Attempt to fix the JSON using a lenient parser
-            try:
-                import demjson3
-                cleaned_text = response.text.strip()
-                match = re.search(r"```json\s*({.*})\s*```", cleaned_text, re.DOTALL)
-                if match:
-                    cleaned_text = match.group(1)
-                
-                evaluation_dict = demjson3.decode(cleaned_text)
-                if citation_sources:
-                    evaluation_dict['references'] = citation_sources
-                return evaluation_dict
-            except Exception as e2:
-                 raise CodeEvaluatorError(f"Error converting analysis to JSON or adding references: {e} - {e2}")
+            return response.text
+        except Exception as e:
+            raise CodeEvaluatorError(f"Error converting analysis to JSON: {e}")
 
     def _fill_prompt_placeholders(
         self,
