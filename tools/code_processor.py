@@ -145,13 +145,29 @@ class CodeProcessor:
         )
 
     def _evaluate_code(self, strategy, file_path, region_tag, github_link):
-        """
-        Calls the appropriate strategy to evaluate the code and returns the
-        resulting dictionary.
-        """
-        # This now directly returns a dictionary with references included.
-        evaluation_data = strategy.evaluate_code(file_path, region_tag, github_link)
-        return evaluation_data
+        style_info = strategy.evaluate_code(file_path, region_tag, github_link)
+
+        match = re.search(r"```json\s*({.*})\s*```", style_info, re.DOTALL)
+        if match:
+            cleaned_text = match.group(1)
+        else:
+            cleaned_text = style_info.strip()
+
+        cleaned_text = re.sub(r",\s*([\]}])", r"\1", cleaned_text)
+
+        try:
+            return json.loads(cleaned_text)
+        except json.JSONDecodeError as e:
+            logger.warning(
+                f"Initial JSON parsing failed: {e}. Attempting to fix with lenient parser."
+            )
+            try:
+                return demjson3.decode(cleaned_text)
+            except demjson3.JSONDecodeError as e2:
+                logger.error(f"JSON parsing failed even with lenient parser: {e2}")
+                logger.error(f"Malformed JSON text: {cleaned_text}")
+                raise e2
+
 
     def _read_raw_code(self, file_path):
         try:
