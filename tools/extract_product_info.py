@@ -80,12 +80,11 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
     """
     Analyzes code content using an LLM to find the best product match.
     """
-    logger.info("\n---> Rules-based categorization failed. Falling back to LLM analysis...")
+    print("\n---> Rules-based categorization failed. Falling back to LLM analysis...")
     
     try:
-        # Initialize Vertex AI client using project settings
-        vertexai.init(project=settings.GOOGLE_CLOUD_PROJECT, location=settings.GOOGLE_CLOUD_LOCATION)
-        model = GenerativeModel(settings.VERTEXAI_MODEL_NAME)
+        # Initialize the genai client
+        client = genai.Client()
 
         # Construct the prompt
         formatted_product_list = "\n".join([f"- Category: {cat}, Product: {prod}" for cat, prod in product_list])
@@ -106,7 +105,17 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
         Example: {{\"category\": \"Databases\", \"product\": \"Spanner\"}}
         """
 
-        response = model.generate_content(prompt)
+        # Configure generation parameters
+        generation_config = types.GenerateContentConfig(
+            temperature=0.0,
+            top_p=0.9,
+        )
+
+        response = client.models.generate_content(
+            model=settings.VERTEXAI_MODEL_NAME,
+            contents=prompt,
+            config=generation_config,
+        )
         
         # Clean up the response text to ensure it's valid JSON
         text_to_load = response.text.strip()
@@ -118,11 +127,11 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
         category = result.get("category", "Uncategorized")
         product = result.get("product", "Uncategorized")
         
-        logger.info(f"---> LLM categorized as: Category='{category}', Product='{product}'")
+        print(f"---> LLM categorized as: Category='{category}', Product='{product}'")
         return category, product
 
     except (json.JSONDecodeError, AttributeError, Exception) as e:
-        logger.error(f"LLM categorization or parsing failed: {e}")
+        print(f"LLM categorization or parsing failed: {e}")
         return "Uncategorized", "Uncategorized"
 
 
