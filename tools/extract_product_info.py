@@ -2,7 +2,6 @@ import re
 import os
 import yaml
 import json
-from collections import OrderedDict
 from typing import Optional
 from config import settings
 from google import genai
@@ -13,11 +12,18 @@ from google.genai import types
 # ==============================================================================
 
 def _load_product_config():
-    """Loads the product hierarchy and keywords from an external YAML file."""
+    """
+    Loads and merges product hierarchy and keywords from the YAML configuration.
+
+    This function establishes a prioritized order for product matching. It first
+    adds a predefined list of high-priority products and then appends the
+    remaining products from the YAML file. This ensures that more specific
+    or commonly confused products are checked first.
+    """
     hierarchy = {}
+    # The ordered_products list defines a specific priority for matching,
+    # ensuring that more specific products are checked before broader ones.
     ordered_products = [
-        # This list defines a specific priority order for matching.
-        # Products here will be checked before any others.
         ('Data Analytics', 'BigQuery Migration'),
         ('Data Analytics', 'BigQuery Data Transfer'),
         ('Data Analytics', 'BigQuery Reservation'),
@@ -45,7 +51,7 @@ def _load_product_config():
             hierarchy[key] = product_info.get('keywords', [])
             all_products_from_yaml.append(key)
 
-    # Add the remaining products from YAML, ensuring no duplicates and preserving priority
+    # Merge the priority list with the full list from YAML, avoiding duplicates.
     for product in all_products_from_yaml:
         if product not in ordered_products:
             ordered_products.append(product)
@@ -61,7 +67,13 @@ PRODUCT_HIERARCHY, ORDERED_PRODUCTS = _load_product_config()
 # ==============================================================================
 
 def _find_product_by_rules(search_string: str) -> Optional[tuple[str, str]]:
-    """Iterates through the ordered list of products to find the first keyword match."""
+    """
+    Finds a product by matching keywords against a search string.
+
+    This function iterates through a predefined, ordered list of products and
+    their associated keywords. The first product with a keyword that matches the
+    search string is returned. This rules-based approach is fast and deterministic.
+    """
     if not isinstance(search_string, str):
         return None
 
@@ -69,6 +81,8 @@ def _find_product_by_rules(search_string: str) -> Optional[tuple[str, str]]:
     for category, product in ORDERED_PRODUCTS:
         keywords = PRODUCT_HIERARCHY.get((category, product), [])
         for keyword in keywords:
+            # Some keywords may not be valid regular expressions. In those cases,
+            # fall back to a simple substring check.
             try:
                 if re.search(keyword, search_string_lower):
                     return category, product
@@ -79,7 +93,12 @@ def _find_product_by_rules(search_string: str) -> Optional[tuple[str, str]]:
 
 def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, str]:
     """
-    Analyzes code content using an LLM to find the best product match.
+    Analyzes code content using a large language model (LLM) for categorization.
+
+    When the rules-based approach fails, this function sends the code to an LLM
+    with a carefully crafted prompt. The prompt instructs the model to act as a
+    Google Cloud expert and choose the best product from a provided list.
+    The model's response is expected to be a JSON object, which is then parsed.
     """
     print("\n---> Rules-based categorization failed. Falling back to LLM analysis...")
     
@@ -118,7 +137,8 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
             config=generation_config,
         )
         
-        # Clean up the response text to ensure it's valid JSON
+        # The LLM's response may include markdown formatting (e.g., ```json).
+        # This code extracts the raw JSON string to ensure reliable parsing.
         text_to_load = response.text.strip()
         match = re.search(r'```json\s*({.*?})\s*```', text_to_load, re.DOTALL)
         if match:
@@ -142,26 +162,28 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
 
 def categorize_sample(row_data: dict, code_content: str = "") -> tuple[str, str]:
     """
-    Categorizes a single sample into a product category and product name.
+    Categorizes a code sample using a two-stage process.
+
+    This function first attempts to categorize the sample using a fast,
+    rules-based engine that checks for keywords in the URL, region tag, and
+    repository name. If this fails, it falls back to a more powerful but
+    slower LLM-based analysis of the code content itself.
 
     Args:
-        row_data: A dictionary representing a row from the CSV, must contain keys:
-                  'indexed_source_url', 'region_tag', 'repository_name'.
-        code_content: The actual string content of the code file from the URL.
-                      This is used as a fallback if rules-based methods fail.
+        row_data: A dictionary containing metadata about the code sample.
+        code_content: The full text of the code file.
 
     Returns:
-        A tuple containing (product_category, product_name).
-        Returns ('Uncategorized', 'Uncategorized') if no match is found.
+        A tuple containing the determined product category and product name.
     """
-    # Stage 1: Attempt categorization using the fast, deterministic rules engine.
-    # Priority Order: URL -> region_tag -> repository_name
+    # Stage 1: Fast, deterministic categorization using metadata.
+    # The order of fields is important, as URLs are often the most specific.
     for field in ['indexed_source_url', 'region_tag', 'repository_name']:
         result = _find_product_by_rules(row_data.get(field))
         if result:
             return result
 
-    # Stage 2: If no match, fall back to the LLM using the code content.
+    # Stage 2: If rules-based matching fails, use the LLM for deeper analysis.
     if code_content:
         llm_result = _categorize_with_llm(code_content, ORDERED_PRODUCTS)
         if llm_result[0] != 'Uncategorized':
@@ -174,8 +196,10 @@ def categorize_sample(row_data: dict, code_content: str = "") -> tuple[str, str]
 # ==============================================================================
 # 4. EXAMPLE USAGE
 # ==============================================================================
-
 if __name__ == '__main__':
+    # This block demonstrates the functionality of the categorize_sample function
+    # with different types of input data, showcasing both the rules-based and
+    # LLM-based categorization paths.
     # --- Example 1: Clear case, solvable by URL ---
     sample_row_1 = {
         'region_tag': 'spanner_quickstart',

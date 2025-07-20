@@ -7,10 +7,19 @@ from utils.exceptions import CodeEvaluatorError
 
 
 class CodeEvaluator(BaseTool):
+    """
+    A tool for evaluating code samples using a large language model (LLM).
+
+    This class encapsulates the logic for reading a code file, constructing a
+    detailed prompt, and using a two-step LLM process to generate a structured
+    JSON evaluation. The first LLM call performs the core analysis with web
+    grounding, and the second call formats the analysis into a clean JSON object.
+    """
     def __init__(self, config):
         self.config = config
         try:
             self.client = genai.Client()
+            # System instructions are loaded from a file to guide the LLM's behavior.
             with open("./prompts/system_instructions.txt", "r") as f:
                 self.system_instructions = f.read().splitlines()
         except Exception as e:
@@ -18,7 +27,7 @@ class CodeEvaluator(BaseTool):
 
     def execute(self, file_path, language, region_tag, github_link):
         """
-        Evaluates code using the Gemini 2.5 Flash model on Vertex AI.
+        Reads a code file and returns a JSON string with an LLM-driven evaluation.
         """
         try:
             with open(file_path, "r", encoding="utf-8") as file:
@@ -28,7 +37,7 @@ class CodeEvaluator(BaseTool):
         except Exception as e:
             raise CodeEvaluatorError(f"Error reading file: {e}")
 
-        # Read prompt from file
+        # The initial prompt is loaded from a template file.
         try:
             with open("./prompts/consolidated_eval.txt", "r") as f:
                 prompt_template = f.read()
@@ -37,7 +46,7 @@ class CodeEvaluator(BaseTool):
         except Exception as e:
             raise CodeEvaluatorError(f"Error reading prompt file: {e}")
 
-        # Inject code into prompt
+        # The code and its metadata are injected into the prompt template.
         prompt = self._fill_prompt_placeholders(
             prompt_template_string=prompt_template,
             language=language,
@@ -46,7 +55,8 @@ class CodeEvaluator(BaseTool):
             region_tag=region_tag,
         )
 
-        # Configure generation parameters for the first call with grounding.
+        # The first LLM call uses Google Search as a grounding tool to ensure the
+        # analysis is based on the most current and accurate information.
         grounding_tool = Tool(google_search=GoogleSearch())
         grounding_generation_config = types.GenerateContentConfig(
             temperature=0.0,
@@ -65,7 +75,8 @@ class CodeEvaluator(BaseTool):
         except Exception as e:
             raise CodeEvaluatorError(f"Error generating content from Vertex AI: {e}")
 
-        # Convert the analysis text to JSON
+        # The second LLM call is a formatting step. It takes the raw text analysis
+        # from the first call and converts it into a structured JSON object.
         try:
             with open("./prompts/json_conversion.txt", "r") as f:
                 json_prompt_template = f.read()
@@ -76,7 +87,7 @@ class CodeEvaluator(BaseTool):
 
         json_prompt = json_prompt_template.replace("{{text}}", analysis_text)
 
-        # Configure generation parameters for the second call without grounding.
+        # Grounding is not needed for this second, simpler formatting task.
         json_generation_config = types.GenerateContentConfig(
             temperature=0.0,
             top_p=0.9,
@@ -102,13 +113,14 @@ class CodeEvaluator(BaseTool):
         region_tag: str,
     ) -> str:
         """
-        Replaces placeholders in an existing prompt template string.
+        Injects dynamic values into the prompt template.
+
+        This function takes the raw prompt template and populates it with the
+        specific details of the code sample being evaluated, such as its
+        language, source URL, and the code itself.
         """
-        language_lowercase = language.lower()
-        prompt = f"**LANGUAGE:**\n{language}\n\n"
-        prompt += f"**URI:**\n{github_link}\n\n"
-        prompt += f"**Region Tag ID:**\n{region_tag}\n\n"
-        prompt += (
-            f"**CODE_SAMPLE:**\n```{language_lowercase}\n{json.dumps(code_sample)}\n```"
-        )
+        prompt = prompt_template_string.replace("{{language}}", language)
+        prompt = prompt.replace("{{uri}}", github_link)
+        prompt = prompt.replace("{{region_tag}}", region_tag)
+        prompt = prompt.replace("{{code}}", code_sample)
         return prompt

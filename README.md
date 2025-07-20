@@ -1,128 +1,88 @@
-# Code Quality Analyzer
+# JSRepoAnalysis: AI-Powered Code Quality Analyzer
 
-This tool analyzes a local codebase of Javascript, Python, Java, Go, Rust, Ruby, C#, C++, PHP, and Terraform files, performs an AI-powered quality evaluation, and stores the results in a BigQuery table.
+JSRepoAnalysis is a powerful, command-line tool engineered for development teams that are serious about maintaining high standards of code quality and consistency. It analyzes local or remote codebases, performs a deep, AI-powered style and quality evaluation, and stores the results in a structured BigQuery database.
 
-## Documentation
+This provides a comprehensive and queryable history of a project's code health, enabling engineering managers, tech leads, and developers to track quality trends, identify areas for improvement, and ensure that all code adheres to a consistent standard of excellence.
 
-For a full understanding of the project's purpose, architecture, and how to contribute, please see the documentation in the `docs/` directory:
+## Key Features
 
-* **[Product Requirements Document](./docs/PRODUCT_REQUIREMENTS.md)**
-* **[Technical Design Document](./docs/TECHNICAL_DESIGN.md)**
+- **Multi-Language Support**: Analyzes a wide range of programming languages, including Javascript, Typescript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP.
+- **Flexible Input Sources**: Process code from a single file, a local directory, or a CSV file containing a list of GitHub URLs.
+- **AI-Powered Evaluation**: Leverages the Google Gemini model to perform a nuanced, context-aware style and quality evaluation that goes beyond traditional linters.
+- **Accurate Product Categorization**: A sophisticated, two-stage engine accurately categorizes code samples. It uses a fast, rules-based approach first, with an LLM-based fallback for complex cases, ensuring precise product and technology mapping.
+- **Rich Git Integration**: Automatically enriches the analysis with Git metadata, including the last commit date, full commit history, and a direct link to the file on GitHub.
+- **Centralized BigQuery Storage**: Stores all analysis results in a structured BigQuery database, perfect for longitudinal analysis, data visualization, and building custom quality dashboards.
+- **Efficient & Robust Processing**: Features incremental analysis to skip unchanged files, parallel processing for speed, and a robust error-logging and reprocessing mechanism.
 
-## Setup and Installation
+## How It Works
 
-### Prerequisites
+The tool operates through a series of orchestrated steps:
 
-* Python 3.9+
-* Google Cloud SDK installed and authenticated (`gcloud auth application-default login`)
+1.  **File Ingestion**: The `main.py` script parses user arguments to gather a list of files to process from the specified source (local path, directory, or CSV). For remote files, it efficiently clones or updates the source repositories.
+2.  **Parallel Processing**: A thread pool is used to process multiple files in parallel, significantly speeding up analysis of large projects.
+3.  **Code & Git Analysis**: For each file, the `CodeProcessor` extracts key metadata, including Git history and Google Cloud region tags.
+4.  **Product Categorization**: The `extract_product_info` tool determines the associated Google Cloud product. It first uses a highly accurate, rules-based engine defined in `product_hierarchy.yaml`. If that fails, it falls back to an LLM-based analysis for a definitive classification.
+5.  **AI Quality Evaluation**: The `CodeEvaluator` sends the code to the Gemini model, which performs a detailed analysis against a comprehensive set of quality criteria defined in the `prompts/` directory.
+6.  **Data Storage**: The complete analysis, including all metadata, product info, and AI evaluation scores, is saved as a structured record in the configured BigQuery table.
 
-### Clone the Repository
+For a more detailed breakdown, see the [Technical Design Document](./docs/TECHNICAL_DESIGN.md).
 
-```sh
-git clone https://github.com/joeshirey/JSRepoAnalysis.git
-cd JSRepoAnalysis
-```
+## Installation
 
-### Install Dependencies
+1.  **Prerequisites**:
+    *   Python 3.10+
+    *   `git` command-line tool
+    *   Google Cloud SDK (`gcloud`) authenticated with a project that has the Vertex AI and BigQuery APIs enabled.
 
-It's recommended to use a Python virtual environment:
-
-```sh
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### Configure Environment Variables
-
-The tool uses a `.env` file to manage configuration:
-
-1. **Copy the example file:**
-
-    ```sh
-    cp .env.sample .env
+2.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/joeshirey/JSRepoAnalysis.git
+    cd JSRepoAnalysis
     ```
 
-2. **Edit the `.env` file** and provide values for the following:
-    * `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
-    * `GOOGLE_CLOUD_LOCATION`: The Google Cloud region for Vertex AI (e.g., `us-central1`).
-    * `VERTEXAI_MODEL_NAME`: The Gemini model to use (e.g., `gemini-1.5-flash-001`).
-    * `BIGQUERY_DATASET`: The name of your BigQuery dataset.
-    * `BIGQUERY_TABLE`: The name of your BigQuery table.
-    * `GOOGLE_GENAI_USE_VERTEXAI`: Set to `True` to use Vertex AI.
-    * `REPO_SAMPLES_DIR`: The local directory for cloning repositories from the CSV file (defaults to `~/samples`).
+3.  **Set up the environment:**
+    *   Create a Python virtual environment.
+    *   Install the required dependencies using `uv`:
+        ```bash
+        uv pip install -r requirements.txt
+        ```
 
-## BigQuery Schema
+4.  **Configure the application:**
+    *   Copy the `.env.sample` file to `.env`:
+        ```bash
+        cp .env.sample .env
+        ```
+    *   Edit the `.env` file and provide the necessary values for your Google Cloud project, BigQuery dataset, etc.
 
-The SQL definitions for the BigQuery table and the recommended analysis view are located in the `BQ/` directory.
+## Usage
 
-* **`create_table.sql`**: Contains the `CREATE OR REPLACE TABLE` statement for the main data table (`repo_analysis`). This table is structured with top-level columns for efficient querying and filtering, while storing complex, nested data (like commit history and evaluation results) as `JSON`.
-* **`create_view.sql`**: Contains the `CREATE OR REPLACE VIEW` statement for the recommended analysis view (`repo_analysis_view`). This view flattens the JSON data from the main table, unnests the evaluation criteria, and ensures that only the most recent evaluation for each file is shown, providing a simplified and reliable data source for dashboards and analysis.
+The tool is run from the command line via `main.py`.
 
-## How to Run
-
-The tool can analyze a single file, an entire directory, a CSV of GitHub links, or reprocess files from an error log.
-
-### Analyze a Single File or Directory
-
-```sh
-# Analyze a single file
-python main.py /path/to/your/file.js
-
-# Analyze a directory
-python main.py /path/to/your/directory/
+**Analyze a single file and print results to the console:**
+```bash
+uv run main.py /path/to/your/file.py --eval-only
 ```
 
-### Analyze from a CSV
-
-To analyze a list of files from a CSV, use the `--from-csv` flag. The tool will clone the repositories if they don't exist, or pull the latest changes if they do. It now automatically detects the default branch of each repository.
-
-The CSV file must contain a header row and at least one column named `indexed_source_url`, which should contain the full GitHub URL to the file.
-
-```sh
-python main.py --from-csv inventory.csv
+**Analyze an entire directory and save to BigQuery:**
+```bash
+uv run main.py /path/to/your/project/
 ```
 
-### Evaluate a Single File
-
-To quickly evaluate a single file and print the results to the console without saving them to BigQuery, use the `--eval-only` flag:
-
-```sh
-python main.py --eval-only /path/to/your/file.js
+**Analyze a list of GitHub URLs from a CSV file:**
+```bash
+uv run main.py --from-csv /path/to/your/links.csv
 ```
 
-### Reprocessing Errored Files
-
-If any files fail during a run, an error log will be created in the `logs/` directory. You can reprocess these files using the `--reprocess-log` flag:
-
-```sh
-python main.py --reprocess-log logs/errors_2025-06-27.log
+**Force re-analysis of all files, even if unchanged:**
+```bash
+uv run main.py /path/to/your/project/ --regen
 ```
 
-You can also combine this with other flags, which will be applied to all files in the log:
-
-```sh
-python main.py --reprocess-log logs/errors_2025-06-27.log --regen --db "my-other-db"
+**Reprocess files that failed in a previous run:**
+```bash
+uv run main.py --reprocess-log logs/your_error_log.log
 ```
 
-## Command-Line Arguments
+## Contributing
 
-* `file_link`: (Optional) The path to the code file or directory to analyze.
-* `--from-csv`: (Optional) The path to a CSV file with GitHub links to process.
-* `--regen`: Forces the tool to re-analyze files and update the corresponding record in BigQuery.
-* `--db <table_name>`: Overrides the `BIGQUERY_TABLE` environment variable.
-* `--reprocess-log <log_file_path>`: Reprocesses files listed in the specified error log.
-* `--eval-only`: Analyzes a single file and prints the results to the console without saving to BigQuery.
-* `--workers`: The number of parallel threads to use for cloning and processing.
-
-## Project Structure
-
-* `main.py`: Main entry point for the command-line tool.
-* `config.py`: Manages environment variables and configuration.
-* `setup.py`: Setup script for packaging and distribution.
-* `docs/`: Contains Product Requirements and Technical Design documents.
-* `strategies/`: Contains language-specific analysis strategies.
-* `tools/`: Core logic for file processing, Git integration, and AI evaluation.
-* `utils/`: Utility modules for logging, exceptions, and data classes.
-* `prompts/`: Templates for AI evaluation prompts.
-
+Contributions are welcome! Please feel free to submit a pull request or open an issue. For more details, see the [product requirements](./docs/PRODUCT_REQUIREMENTS.md) and [technical design](./docs/TECHNICAL_DESIGN.md).

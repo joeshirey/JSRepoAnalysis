@@ -12,17 +12,28 @@ The Code Quality Analyzer is a monolithic Python application that is designed to
 
 ```mermaid
 graph TD
-    A[CSV of GitHub Links] --> B(main.py);
-    C[Directory Path] --> B;
-    D[File Path] --> B;
-    E[Reprocess Log] --> B;
+    A[Input Source] --> B(main.py);
+    subgraph Input Source
+        direction LR
+        C1[File Path];
+        C2[Directory Path];
+        C3[CSV of GitHub Links];
+        C4[Reprocess Log];
+    end
+
     B --> F{CodeProcessor};
     F --> G[Strategy Factory];
     G --> H[Language Strategy];
     H --> I[Code Evaluator];
-    I --> J[Vertex AI];
+    I --> J[Vertex AI Gemini];
+    
     F --> K[Git File Processor];
     F --> L[Region Tag Extractor];
+    
+    F --> P[Product Info Extractor];
+    P --> Q((product_hierarchy.yaml));
+    P --> J;
+
     F --> M[BigQuery Repository];
     M --> N[(BigQuery)];
 ```
@@ -41,7 +52,7 @@ graph TD
     *   Using a `ThreadPoolExecutor` to clone or update the repositories in parallel.
     *   Dynamically determining the default branch of each repository by calling `git remote show` and parsing the output. This makes the cloning process more robust and avoids errors when a repository's default branch is not named `main`.
 
-*   **`tools/code_processor.py`**: The `CodeProcessor` class is the heart of the application. It is responsible for orchestrating the analysis of a single file and is composed of a set of smaller, more focused components. It supports the lazy initialization of the BigQuery repository, which means that the connection to the database is only established when it is actually needed.
+*   **`tools/code_processor.py`**: The `CodeProcessor` class is the heart of the application. It is responsible for orchestrating the analysis of a single file and is composed of a set of smaller, more focused components. It manages the entire lifecycle of a file's analysis, from fetching Git metadata to calling the evaluation tools and finally saving the result. It supports the lazy initialization of the BigQuery repository, which means that the connection to the database is only established when it is actually needed.
 
 *   **`strategies/`**: This directory contains the language-specific logic, which is designed to be easily extensible.
     *   **`strategy_factory.py`**: A factory function that returns a `LanguageStrategy` instance based on the file extension. This allows the system to easily support new languages by simply adding a new entry to the strategy map.
@@ -50,8 +61,9 @@ graph TD
 *   **`tools/`**: This directory contains the core logic of the application, which is separated into a set of distinct and reusable modules.
     *   **`git_file_processor.py`**: The `GitFileProcessor` class uses the `git` command-line tool via the `subprocess` module to extract a rich set of metadata about a file, including its last commit date, commit history, and a direct link to the file on GitHub.
     *   **`extract_region_tags.py`**: The `RegionTagExtractor` class uses regular expressions to find and extract all Google Cloud-style region tags from the code.
-    *   **`evaluate_code_file.py`**: The `CodeEvaluator` class is responsible for the AI-powered analysis. It reads a prompt template from the `prompts/` directory, injects the code into the prompt, and then uses the `vertexai` library to call the configured Gemini model.
-    *   **`bigquery.py`**: The `BigQueryRepository` class encapsulates all interactions with the BigQuery table, providing a clean and simple interface for saving the analysis results.
+    *   **`extract_product_info.py`**: The `ProductInfoExtractor` is a key component for data accuracy. It uses a two-stage process to categorize the code sample. First, it attempts to match keywords from the file's metadata against a curated list in `product_hierarchy.yaml`. This rules-based engine is fast and highly accurate. If it fails, the extractor falls back to calling the Gemini LLM for a more nuanced analysis of the code content, ensuring a definitive classification.
+    *   **`evaluate_code_file.py`**: The `CodeEvaluator` class is responsible for the AI-powered quality analysis. It reads prompt templates from the `prompts/` directory, injects the code into the prompt, and then uses the `google-genai` library to call the configured Gemini model. Its sole focus is on assessing the code against predefined quality criteria.
+    *   **`bigquery.py`**: The `BigQueryRepository` class encapsulates all interactions with the BigQuery table, providing a clean and simple interface for creating, reading, and deleting analysis records.
 
 *   **`utils/`**: This directory contains a set of utility modules that are used throughout the application.
     *   **`logger.py`**: Configures a centralized logger for the application, which provides a consistent and easy-to-use interface for logging messages.
@@ -66,7 +78,7 @@ graph TD
 
 The application uses a structured BigQuery table and a flattened view to store and analyze the data. The SQL definitions for these are located in the `BQ/` directory.
 
-*   **`repo_analysis` (Table)**: This is the main table where all the raw analysis data is stored. It is designed to be write-efficient and uses a structured schema with top-level columns for frequently queried fields like `github_link`, `product_category`, and `language`. Complex, semi-structured data, such as the full commit history and the detailed evaluation results from the AI model, are stored in `JSON` columns. This design provides a good balance between query performance and the flexibility to handle evolving data from the AI model.
+*   **`repo_analysis` (Table)**: This is the main table where all the raw analysis data is stored. It is designed to be write-efficient and uses a structured schema with top-level columns for frequently queried fields like `github_link`, `product_category`, and `language`. The `product_category` and `product_name` fields are populated by the high-fidelity `ProductInfoExtractor`, ensuring data reliability for reporting. Complex, semi-structured data, such as the full commit history and the detailed evaluation results from the AI model, are stored in `JSON` columns. This design provides a good balance between query performance and the flexibility to handle evolving data from the AI model.
 
 *   **`repo_analysis_view` (View)**: This view is the recommended interface for data analysis and visualization. It provides a clean, flattened representation of the data by:
     1.  Unnesting the `criteria_breakdown` from the `evaluation_data` JSON column to expose each criterion's score and assessment as a top-level column.
@@ -81,14 +93,20 @@ sequenceDiagram
     participant User
     participant main.py
     participant CodeProcessor
+    participant ProductInfoExtractor
+    participant CodeEvaluator
     participant VertexAI
     participant BigQuery
 
     User->>main.py: Execute with file path or CSV
     main.py->>CodeProcessor: Process file
-    CodeProcessor->>VertexAI: Analyze code
-    VertexAI-->>CodeProcessor: Evaluation results
-    CodeProcessor->>BigQuery: Save results
+    CodeProcessor->>ProductInfoExtractor: Categorize sample
+    ProductInfoExtractor-->>CodeProcessor: Product Category & Name
+    CodeProcessor->>CodeEvaluator: Evaluate code quality
+    CodeEvaluator->>VertexAI: Analyze code
+    VertexAI-->>CodeEvaluator: Evaluation results (JSON)
+    CodeEvaluator-->>CodeProcessor: Evaluation results (dict)
+    CodeProcessor->>BigQuery: Save combined results
     BigQuery-->>CodeProcessor: Confirm save
     CodeProcessor-->>main.py: Done
     main.py-->>User: Log output
@@ -99,25 +117,26 @@ sequenceDiagram
 3.  If the `--from-csv` flag is used, the `get_files_from_csv` function is called to clone or update the repositories.
 4.  The `CodeProcessor` is initialized.
 5.  For each file in the list, the `CodeProcessor` orchestrates the analysis by:
-    a.  Calling the `strategy_factory` to get the appropriate `LanguageStrategy`.
-    b.  Calling the various tools to extract Git info, region tags, and perform the AI evaluation.
-    c.  Storing the results in an `AnalysisResult` data class.
-    d.  Using the `BigQueryRepository` to save the `AnalysisResult` to BigQuery.
+    a.  Calling the `ProductInfoExtractor` to determine the product category and name.
+    b.  Calling the `strategy_factory` to get the appropriate `LanguageStrategy`.
+    c.  The strategy calls the `CodeEvaluator`, which in turn calls the Gemini model to perform the quality assessment.
+    d.  The `CodeProcessor` combines the product information, Git metadata, and AI evaluation into a single `AnalysisResult` object.
+    e.  The `BigQueryRepository` is used to save the `AnalysisResult` to BigQuery.
 6.  If any errors occur during processing, they are logged to a dynamically named log file in the `logs/` directory.
 
 ## 4. Key Technologies
 
 *   **Language:** Python 3
 *   **Command-Line Parsing:** `argparse`
-*   **AI/LLM:** Google Gemini, via the `google-cloud-aiplatform` SDK.
+*   **AI/LLM:** Google Gemini, via the `google-genai` library.
 *   **Database:** Google Cloud BigQuery
 *   **Configuration:** `pydantic-settings` for managing environment variables.
+*   **YAML Parsing**: `PyYAML` for reading the product hierarchy configuration.
 *   **Version Control Integration:** `git` (via `subprocess`).
 *   **Parallel Processing**: `ThreadPoolExecutor` for cloning and processing files in parallel.
 
 ## 5. Future Considerations
 
 *   **Decoupling from Git:** The system currently requires the files to be within a Git repository to function correctly. This could be made optional to allow for the analysis of arbitrary, non-versioned code.
-*   **Support for Other VCS:** The system could be extended to support other version control systems, such as Subversion or Mercurial.
-*   **Integration with CI/CD:** The tool could be integrated into a CI/CD pipeline to automatically analyze code on every commit.
+*   **Integration with CI/CD:** The tool could be integrated into a CI/CD pipeline to automatically analyze code on every commit, providing immediate feedback in pull requests.
 *   **Web-based UI:** A web-based UI could be developed to provide a more user-friendly way to view the analysis results and manage the system.
