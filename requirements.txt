@@ -11,3 +11,4 @@ ruff
 pytest
 pydantic-settings
 PyYAML
+google-cloud-aiplatform

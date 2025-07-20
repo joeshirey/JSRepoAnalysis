@@ -1,11 +1,11 @@
 import re
 import os
 import yaml
+import json
 from collections import OrderedDict
-
-# You will need to install your preferred LLM library, e.g.:
-# pip install --upgrade google-cloud-aiplatform
-# from vertexai.generative_models import GenerativeModel
+from config import settings
+from google import genai
+from google.genai import types
 
 # ==============================================================================
 # 1. THE HIERARCHY AND KEYWORD MAPPING (LOADED FROM YAML)
@@ -78,54 +78,52 @@ def _find_product_by_rules(search_string: str) -> tuple[str, str] or None:
 
 def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, str]:
     """
-    Placeholder for your LLM call. Analyzes code content to find the best product match.
+    Analyzes code content using an LLM to find the best product match.
     """
-    # ---- REPLACE THIS SECTION WITH YOUR ACTUAL LLM CLIENT (e.g., Vertex AI) ----
-    #
-    # Example using Vertex AI Gemini:
-    #
-    # import vertexai
-    # from vertexai.generative_models import GenerativeModel
-    # import json
-    #
-    # vertexai.init(project="your-gcp-project-id", location="your-gcp-location")
-    # model = GenerativeModel("gemini-1.5-flash-001")
-    #
-    # # Construct the prompt
-    # formatted_product_list = "\n".join([f"- Category: {cat}, Product: {prod}" for cat, prod in product_list])
-    #
-    # prompt = f"""
-    # You are an expert Google Cloud developer. Your task is to categorize a code sample into a specific Google Cloud product.
-    # Analyze the following code, paying close attention to import statements, client library initializations, and API calls.
-    #
-    # Code Sample:
-    # ```    # {code_content[:15000]}
-    # ```
-    #
-    # Based on your analysis, choose the single best-fitting product from the following list:
-    # {formatted_product_list}
-    #
-    # Return your answer as a single, valid JSON object with two keys: "category" and "product". Do not include any other text or formatting.
-    # Example: {{"category": "Databases", "product": "Spanner"}}
-    # """
-    #
-    # try:
-    #     response = model.generate_content(prompt)
-    #     result = json.loads(response.text)
-    #     return result.get("category", "Uncategorized"), result.get("product", "Uncategorized")
-    # except (json.JSONDecodeError, AttributeError, Exception) as e:
-    #     print(f"LLM parsing failed: {e}")
-    #     return "Uncategorized", "Uncategorized"
-    #
-    # ---- END OF REPLACEABLE SECTION ----
+    logger.info("\n---> Rules-based categorization failed. Falling back to LLM analysis...")
+    
+    try:
+        # Initialize Vertex AI client using project settings
+        vertexai.init(project=settings.GOOGLE_CLOUD_PROJECT, location=settings.GOOGLE_CLOUD_LOCATION)
+        model = GenerativeModel(settings.VERTEXAI_MODEL_NAME)
 
-    # For demonstration purposes, this placeholder returns a default value.
-    print("\n---> Rules-based categorization failed. Falling back to LLM analysis...")
-    print("(This is a placeholder. Replace `_categorize_with_llm` with your actual LLM client.)")
-    # Simulate a successful LLM call for a hypothetical case
-    if "from google.cloud import bigquery" in code_content:
-         return "Data Analytics", "BigQuery"
-    return "Uncategorized", "Uncategorized"
+        # Construct the prompt
+        formatted_product_list = "\n".join([f"- Category: {cat}, Product: {prod}" for cat, prod in product_list])
+        
+        prompt = f"""
+        You are an expert Google Cloud developer. Your task is to categorize a code sample into a specific Google Cloud product.
+        Analyze the following code, paying close attention to import statements, client library initializations, and API calls.
+
+        Code Sample:
+        ```
+        {code_content[:15000]}
+        ```
+
+        Based on your analysis, choose the single best-fitting product from the following list:
+        {formatted_product_list}
+
+        Return your answer as a single, valid JSON object with two keys: "category" and "product". Do not include any other text or formatting.
+        Example: {{\"category\": \"Databases\", \"product\": \"Spanner\"}}
+        """
+
+        response = model.generate_content(prompt)
+        
+        # Clean up the response text to ensure it's valid JSON
+        text_to_load = response.text.strip()
+        match = re.search(r'```json\s*({.*?})\s*```', text_to_load, re.DOTALL)
+        if match:
+            text_to_load = match.group(1)
+
+        result = json.loads(text_to_load)
+        category = result.get("category", "Uncategorized")
+        product = result.get("product", "Uncategorized")
+        
+        logger.info(f"---> LLM categorized as: Category='{category}', Product='{product}'")
+        return category, product
+
+    except (json.JSONDecodeError, AttributeError, Exception) as e:
+        logger.error(f"LLM categorization or parsing failed: {e}")
+        return "Uncategorized", "Uncategorized"
 
 
 # ==============================================================================
