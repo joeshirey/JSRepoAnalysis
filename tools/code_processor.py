@@ -213,3 +213,17 @@ class CodeProcessor:
     def close(self):
         if self._bigquery_repo:
             self._bigquery_repo.close()
+
+    def analyze_file_only(self, file_path):
+        """
+        Analyzes a single file without any database interaction.
+        """
+        strategy = get_strategy(file_path, self.settings)
+        if not strategy:
+            raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")
+
+        git_info = self._get_git_info(file_path)
+        analysis_result = self._analyze_file(file_path, strategy, git_info)
+        if analysis_result:
+            return asdict(analysis_result)
+        return None
