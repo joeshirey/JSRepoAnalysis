@@ -91,6 +91,7 @@ class CodeEvaluator(BaseTool):
         json_generation_config = types.GenerateContentConfig(
             temperature=0.0,
             top_p=0.9,
+            seed=5,
             system_instruction=self.system_instructions,
         )
 
