@@ -160,37 +160,40 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
 # 3. MAIN PUBLIC FUNCTION
 # ==============================================================================
 
-def categorize_sample(row_data: dict, code_content: str = "") -> tuple[str, str]:
+def categorize_sample(
+    row_data: dict, code_content: str = "", llm_fallback: bool = False
+) -> tuple[str, str, bool]:
     """
     Categorizes a code sample using a two-stage process.
 
     This function first attempts to categorize the sample using a fast,
     rules-based engine that checks for keywords in the URL, region tag, and
-    repository name. If this fails, it falls back to a more powerful but
-    slower LLM-based analysis of the code content itself.
+    repository name. If this fails and `llm_fallback` is enabled, it uses a
+    more powerful but slower LLM-based analysis of the code content itself.
 
     Args:
         row_data: A dictionary containing metadata about the code sample.
         code_content: The full text of the code file.
+        llm_fallback: Whether to use the LLM if rule-based methods fail.
 
     Returns:
-        A tuple containing the determined product category and product name.
+        A tuple containing the category, product name, and a boolean indicating
+        if the LLM was used for categorization.
     """
     # Stage 1: Fast, deterministic categorization using metadata.
-    # The order of fields is important, as URLs are often the most specific.
-    for field in ['indexed_source_url', 'region_tag', 'repository_name']:
+    for field in ["indexed_source_url", "region_tag", "repository_name"]:
         result = _find_product_by_rules(row_data.get(field))
         if result:
-            return result
+            return result[0], result[1], False  # (category, product, llm_used)
 
-    # Stage 2: If rules-based matching fails, use the LLM for deeper analysis.
-    if code_content:
+    # Stage 2: If rules fail and fallback is enabled, use the LLM.
+    if llm_fallback and code_content:
         llm_result = _categorize_with_llm(code_content, ORDERED_PRODUCTS)
-        if llm_result[0] != 'Uncategorized':
-            return llm_result
+        if llm_result[0] != "Uncategorized":
+            return llm_result[0], llm_result[1], True  # (category, product, llm_used)
 
     # If all methods fail, return Uncategorized.
-    return 'Uncategorized', 'Uncategorized'
+    return "Uncategorized", "Uncategorized", False
 
 
 # ==============================================================================

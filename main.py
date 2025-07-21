@@ -156,11 +156,85 @@ def process_file_wrapper(
         skipped_counts[file_extension] += 1
 
 
+def categorize_file_wrapper(processor, file_path, csv_writer):
+    """Wrapper function to process a single file and write to CSV."""
+    try:
+        result = processor.categorize_file_only(file_path)
+        if result:
+            csv_writer.writerow(result)
+    except Exception as e:
+        logger.error(f"Error categorizing file {file_path}: {e}")
+
+
+def categorize_only(input_path, max_workers):
+    """
+    Processes files for categorization only and writes the output to a CSV file.
+    """
+    now = datetime.now().strftime("%Y-%m-%d-%H-%M")
+    output_filename = f"{now} - categorization.csv"
+    output_path = os.path.join("logs", output_filename)
+
+    os.makedirs("logs", exist_ok=True)
+
+    files_to_process = []
+    if os.path.isfile(input_path):
+        if input_path.endswith(".csv"):
+            files_to_process = get_files_from_csv(input_path, max_workers)
+        else:
+            files_to_process.append(input_path)
+    elif os.path.isdir(input_path):
+        for root, _, files in os.walk(input_path):
+            for file in files:
+                files_to_process.append(os.path.join(root, file))
+
+    if not files_to_process:
+        logger.info("No files to process.")
+        return
+
+    processor = CodeProcessor(settings)
+    try:
+        with open(output_path, "w", newline="") as csvfile:
+            fieldnames = [
+                "indexed_source_url",
+                "region_tag",
+                "repository_name",
+                "product_category",
+                "product_name",
+                "llm_determined",
+            ]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [
+                    executor.submit(categorize_file_wrapper, processor, file, writer)
+                    for file in files_to_process
+                ]
+
+                processed_count = 0
+                total_files = len(files_to_process)
+                for future in as_completed(futures):
+                    processed_count += 1
+                    progress = (processed_count / total_files) * 100
+                    sys.stdout.write(
+                        f"\rProgress: {processed_count}/{total_files} files categorized ({progress:.2f}%)"
+                    )
+                    sys.stdout.flush()
+                    future.result()
+
+    finally:
+        processor.close()
+        print()  # Newline after progress bar
+
+    logger.info(f"Categorization complete. Output written to {output_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Process a code file or directory.")
     parser.add_argument(
         "file_link", nargs="?", default=None, help="Path to the code file or directory."
     )
+
     parser.add_argument(
         "--from-csv", help="Path to a CSV file with GitHub links to process."
     )
@@ -179,9 +253,21 @@ def main():
         help="Only evaluate a single file and print the result.",
     )
     parser.add_argument(
+        "--categorize-only",
+        action="store_true",
+        help="Run in categorization-only mode.",
+    )
+    parser.add_argument(
         "--workers", type=int, default=10, help="Number of parallel threads to use."
     )
     args = parser.parse_args()
+
+    if args.categorize_only:
+        input_path = args.from_csv or args.file_link
+        if not input_path:
+            parser.error("--categorize-only requires an input path from --from-csv or file_link.")
+        categorize_only(input_path, args.workers)
+        return
 
     if args.eval_only:
         if not args.file_link or not os.path.isfile(args.file_link):

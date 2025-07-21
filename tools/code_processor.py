@@ -126,16 +126,19 @@ class CodeProcessor:
 
         # Now, use the new, more reliable product categorization logic
         row_data = {
-            'indexed_source_url': git_info.get("github_link"),
-            'region_tag': region_tags[0] if region_tags else "",
-            'repository_name': git_info.get("github_repo")
+            "indexed_source_url": git_info.get("github_link"),
+            "region_tag": region_tags[0] if region_tags else "",
+            "repository_name": git_info.get("github_repo"),
         }
-        product_category, product_name = categorize_sample(row_data, raw_code)
+        product_category, product_name, llm_determined = categorize_sample(
+            row_data, raw_code, llm_fallback=True
+        )
 
         # Update the evaluation data with the new product info, overwriting
         # whatever the LLM might have provided for these specific fields.
-        evaluation_data['product_category'] = product_category
-        evaluation_data['product_name'] = product_name
+        evaluation_data["product_category"] = product_category
+        evaluation_data["product_name"] = product_name
+        evaluation_data["llm_determined"] = llm_determined
 
         return AnalysisResult(
             git_info=git_info,
@@ -179,20 +182,34 @@ class CodeProcessor:
     def _save_result(self, row):
         self.bigquery_repo.create(row)
 
+    def categorize_file_only(self, file_path):
+        """
+        Analyzes a single file for product categorization only.
+        """
+        git_info = self._get_git_info(file_path)
+        region_tags = self.tag_extractor.execute(file_path)
+        if not region_tags:
+            return None
+
+        raw_code = self._read_raw_code(file_path)
+        row_data = {
+            "indexed_source_url": git_info.get("github_link"),
+            "region_tag": region_tags[0],
+            "repository_name": git_info.get("github_repo"),
+        }
+        product_category, product_name, llm_determined = categorize_sample(
+            row_data, raw_code, llm_fallback=True
+        )
+
+        return {
+            "indexed_source_url": git_info.get("github_link"),
+            "region_tag": region_tags[0],
+            "repository_name": git_info.get("github_repo"),
+            "product_category": product_category,
+            "product_name": product_name,
+            "llm_determined": llm_determined,
+        }
+
     def close(self):
         if self._bigquery_repo:
             self._bigquery_repo.close()
-
-    def analyze_file_only(self, file_path):
-        """
-        Analyzes a single file without any database interaction.
-        """
-        strategy = get_strategy(file_path, self.settings)
-        if not strategy:
-            raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")
-
-        git_info = self._get_git_info(file_path)
-        analysis_result = self._analyze_file(file_path, strategy, git_info)
-        if analysis_result:
-            return asdict(analysis_result)
-        return None

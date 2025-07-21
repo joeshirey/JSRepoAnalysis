@@ -183,3 +183,4 @@ errors.log
 /scratch
 temp_clones/
 /*.csv
+.roo/
