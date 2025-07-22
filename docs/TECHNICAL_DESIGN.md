@@ -22,6 +22,8 @@ graph TD
     end
 
     B --> F{CodeProcessor};
+    B --> O[Output CSV];
+
     F --> G[Strategy Factory];
     G --> H[Language Strategy];
     H --> I[Code Evaluator];
@@ -45,6 +47,7 @@ graph TD
     *   Gathering the list of files to be processed, whether from a single file path, a directory, a CSV of GitHub links, or a log file of previously failed files.
     *   Using a `ThreadPoolExecutor` to manage a pool of worker threads for parallel processing of files, which significantly improves performance when analyzing large codebases.
     *   Providing a special `--eval-only` mode that allows for the quick analysis of a single file without any interaction with the BigQuery database.
+    *   Providing a `--categorize-only` mode that runs just the product categorization logic and writes the results to a timestamped CSV file in the `logs/` directory.
 
 *   **`get_files_from_csv`**: This function is a key part of the input processing logic. It is responsible for:
     *   Reading a CSV file of GitHub links.
@@ -97,18 +100,29 @@ sequenceDiagram
     participant CodeEvaluator
     participant VertexAI
     participant BigQuery
+    participant OutputCSV
 
     User->>main.py: Execute with file path or CSV
-    main.py->>CodeProcessor: Process file
-    CodeProcessor->>ProductInfoExtractor: Categorize sample
-    ProductInfoExtractor-->>CodeProcessor: Product Category & Name
-    CodeProcessor->>CodeEvaluator: Evaluate code quality
-    CodeEvaluator->>VertexAI: Analyze code
-    VertexAI-->>CodeEvaluator: Evaluation results (JSON)
-    CodeEvaluator-->>CodeProcessor: Evaluation results (dict)
-    CodeProcessor->>BigQuery: Save combined results
-    BigQuery-->>CodeProcessor: Confirm save
-    CodeProcessor-->>main.py: Done
+    
+    alt Full Analysis
+        main.py->>CodeProcessor: Process file
+        CodeProcessor->>ProductInfoExtractor: Categorize sample
+        ProductInfoExtractor-->>CodeProcessor: Product Category & Name
+        CodeProcessor->>CodeEvaluator: Evaluate code quality
+        CodeEvaluator->>VertexAI: Analyze code
+        VertexAI-->>CodeEvaluator: Evaluation results (JSON)
+        CodeEvaluator-->>CodeProcessor: Evaluation results (dict)
+        CodeProcessor->>BigQuery: Save combined results
+        BigQuery-->>CodeProcessor: Confirm save
+        CodeProcessor-->>main.py: Done
+    else Categorize-Only Mode
+        main.py->>CodeProcessor: Categorize file only
+        CodeProcessor->>ProductInfoExtractor: Categorize sample
+        ProductInfoExtractor-->>CodeProcessor: Product Category & Name
+        CodeProcessor-->>main.py: Categorization results
+        main.py->>OutputCSV: Write row
+    end
+
     main.py-->>User: Log output
 ```
 

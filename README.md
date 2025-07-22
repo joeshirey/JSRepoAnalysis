@@ -13,6 +13,7 @@ This provides a comprehensive and queryable history of a project's code health, 
 - **Rich Git Integration**: Automatically enriches the analysis with Git metadata, including the last commit date, full commit history, and a direct link to the file on GitHub.
 - **Centralized BigQuery Storage**: Stores all analysis results in a structured BigQuery database, perfect for longitudinal analysis, data visualization, and building custom quality dashboards.
 - **Efficient & Robust Processing**: Features incremental analysis to skip unchanged files, parallel processing for speed, and a robust error-logging and reprocessing mechanism.
+- **Categorization-Only Mode**: Includes a special mode to run only the product categorization engine and output the results directly to a CSV file, bypassing the AI evaluation and database writes.
 
 ## How It Works
 
@@ -81,6 +82,11 @@ uv run main.py /path/to/your/project/ --regen
 **Reprocess files that failed in a previous run:**
 ```bash
 uv run main.py --reprocess-log logs/your_error_log.log
+```
+
+**Run product categorization only and output to CSV:**
+```bash
+uv run main.py /path/to/your/project/ --categorize-only
 ```
 
 ## Contributing
