@@ -69,7 +69,7 @@ class GitFileProcessor(BaseTool):
                 .strip()
             )
             match = re.search(
-                r"github\.com(?:[:/]|@)(.*?)/(.*?)(?:\.git)?$", remote_url
+                r"github.com(?:[:/]|@)(.*?)/(.*?)(?:\.git)?$", remote_url
             )
             if match:
                 owner = match.group(1)
@@ -134,37 +134,40 @@ class GitFileProcessor(BaseTool):
                 .decode("utf-8")
                 .strip()
             )
+            # Use null byte as field separator and record separator for robust parsing
+            # %x1e is the record separator character
+            log_format = "%H%x00%an%x00%ae%x00%ad%x00%s"
             git_log = subprocess.check_output(
                 [
                     "git",
                     "log",
                     "--follow",
-                    "--pretty=format:%H%n%an%n%ae%n%ad%n%s%n",
+                    f"--pretty=format:{log_format}%x1e",
                     "--",
                     file_path,
                 ],
                 cwd=git_root,
             ).decode("utf-8")
-            commits = []
-            log_lines = git_log.strip().split("\n")
-            i = 0
-            while i + 4 < len(log_lines):
-                commit_hash = log_lines[i].strip()
-                author_name = log_lines[i + 1].strip()
-                author_email = log_lines[i + 2].strip()
-                date = log_lines[i + 3].strip()
-                message = log_lines[i + 4].strip()
 
-                commits.append(
-                    {
-                        "hash": commit_hash,
-                        "author_name": author_name,
-                        "author_email": author_email,
-                        "date": date,
-                        "message": message,
-                    }
-                )
-                i += 5
+            commits = []
+            # Split by the record separator
+            for entry in git_log.strip().split('\x1e'):
+                if not entry:
+                    continue
+
+                # Split by the null byte field separator
+                parts = entry.split('\x00')
+                if len(parts) == 5:
+                    commit_hash, author_name, author_email, date, message = parts
+                    commits.append(
+                        {
+                            "hash": commit_hash.strip(),
+                            "author_name": author_name.strip(),
+                            "author_email": author_email.strip(),
+                            "date": date.strip(),
+                            "message": message.strip(),
+                        }
+                    )
             return commits
         except subprocess.CalledProcessError as e:
             raise GitProcessorError(f"Error getting commit history: {e}")

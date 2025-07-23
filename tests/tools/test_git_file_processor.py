@@ -20,7 +20,7 @@ class TestGitFileProcessor(unittest.TestCase):
             b"main",  # git rev-parse --abbrev-ref HEAD
             b"/path/to/repo",  # git rev-parse --show-toplevel
             b"/path/to/repo",  # git rev-parse --show-toplevel
-            b"12345\nauthor\nemail\nFri Jun 27 12:00:00 2025 +0000\nmessage",  # git log
+            b"12345\x00author\x00email\x00Fri Jun 27 12:00:00 2025 +0000\x00message\x1e",  # git log
         ]
         processor = GitFileProcessor()
 
@@ -62,7 +62,7 @@ class TestGitFileProcessor(unittest.TestCase):
             b"main",
             b"/path/to/repo",
             b"/path/to/repo",
-            b"12345\nauthor\nemail\nFri Jun 27 12:00:00 2025 +0000\nmessage",
+            b"12345\x00author\x00email\x00Fri Jun 27 12:00:00 2025 +0000\x00message\x1e",
         ]
         processor = GitFileProcessor()
 
