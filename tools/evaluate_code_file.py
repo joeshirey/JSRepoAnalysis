@@ -1,5 +1,6 @@
 from .base_tool import BaseTool
 import json
+import re
 from google import genai
 from google.genai import types
 from google.genai.types import Tool, GoogleSearch
@@ -60,7 +61,6 @@ class CodeEvaluator(BaseTool):
         grounding_tool = Tool(google_search=GoogleSearch())
         grounding_generation_config = types.GenerateContentConfig(
             temperature=0.0,
-            top_p=0.9,
             system_instruction=self.system_instructions,
             tools=[grounding_tool],
         )
@@ -124,4 +124,24 @@ class CodeEvaluator(BaseTool):
         prompt = prompt.replace("{{uri}}", github_link)
         prompt = prompt.replace("{{region_tag}}", region_tag)
         prompt = prompt.replace("{{code}}", code_sample)
+        prompt = prompt.replace("{{cleaned_code}}", self.remove_comments(code_sample, language))
         return prompt
+
+    def remove_comments(self, code: str, language: str) -> str:
+        """
+        Removes comments from a code string based on the language.
+        """
+        if language.lower() in ["python", "shell", "ruby"]:
+            # Removes single-line comments starting with #
+            return re.sub(r"#.*", "", code)
+        elif language.lower() in ["javascript", "java", "c", "c++", "c#", "go", "swift", "typescript", "kotlin", "rust", "php"]:
+            # Removes single-line // comments and multi-line /* ... */ comments
+            code = re.sub(r"//.*", "", code)
+            code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)
+            return code
+        elif language.lower() in ["html", "xml"]:
+            # Removes <!-- ... --> comments
+            return re.sub(r"<!--.*?-->", "", code, flags=re.DOTALL)
+        else:
+            # Return original code if language is not supported
+            return code

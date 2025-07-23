@@ -11,3 +11,8 @@
 ```{{language}}
 {{code_sample}}
 ```
+
+**cleaned_code:**
+```
+{{cleaned_code}}
+```
