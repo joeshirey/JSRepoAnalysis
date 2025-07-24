@@ -1,6 +1,7 @@
 from .base_tool import BaseTool
 import json
 import re
+import time
 from google import genai
 from google.genai import types
 from google.genai.types import Tool, GoogleSearch
@@ -72,6 +73,7 @@ class CodeEvaluator(BaseTool):
                 config=grounding_generation_config,
             )
             analysis_text = response.text
+            time.sleep(1)
         except Exception as e:
             raise CodeEvaluatorError(f"Error generating content from Vertex AI: {e}")
 
@@ -101,6 +103,7 @@ class CodeEvaluator(BaseTool):
                 contents=json_prompt,
                 config=json_generation_config,
             )
+            time.sleep(1)
             return response.text
         except Exception as e:
             raise CodeEvaluatorError(f"Error converting analysis to JSON: {e}")

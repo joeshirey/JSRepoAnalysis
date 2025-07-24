@@ -64,6 +64,7 @@ Before generating the final JSON output, you MUST first perform the following pr
 This section contains absolute rules that you MUST follow to override any internal analysis that contradicts them. These are designed to prevent known, common failure patterns.
 
   * **Known Failure Pattern: Ruby `puts` Statement:** Code containing a Ruby `puts` statement with standard string interpolation (e.g., `puts "...#{...}..."`) has repeatedly been flagged incorrectly as an "unterminated string" error. This is a known failure of the analysis. You are **FORBIDDEN** from flagging a `puts` statement with this structure as a syntax error. You MUST treat it as syntactically correct.
+  * **Known Failure Pattern: @google-cloud/modelarmor Package: The npm package @google-cloud/modelarmor has been incorrectly flagged as non-existent. This is a recently published "preview" library and is a valid package. You are FORBIDDEN from flagging this package as a dependency error. You MUST treat it as a valid, importable module.
 
 -----
 

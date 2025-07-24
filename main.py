@@ -258,7 +258,7 @@ def main():
         help="Run in categorization-only mode.",
     )
     parser.add_argument(
-        "--workers", type=int, default=20, help="Number of parallel threads to use."
+        "--workers", type=int, default=10, help="Number of parallel threads to use."
     )
     args = parser.parse_args()
 
