@@ -1,28 +1,35 @@
 import json
-import re
-import demjson3
+import requests
 from datetime import datetime
 from tools.git_file_processor import GitFileProcessor
-from tools.extract_region_tags import RegionTagExtractor
 from tools.bigquery import BigQueryRepository
-from tools.extract_product_info import categorize_sample
-from strategies.strategy_factory import get_strategy
 from utils.logger import logger
 from utils.exceptions import (
-    UnsupportedFileTypeError,
     GitRepositoryError,
-    NoRegionTagsError,
+    APIError,
 )
-from utils.data_classes import AnalysisResult
-from dataclasses import asdict
 
 
 class CodeProcessor:
+    """
+    Orchestrates the analysis of a single code file.
+
+    This class is responsible for coordinating the entire analysis process for a
+    given file. It fetches Git metadata, calls an external API for a detailed
+    code evaluation, and then writes the combined results to a BigQuery table.
+    """
     def __init__(self, settings):
+        """
+        Initializes the CodeProcessor.
+
+        Args:
+            settings: A configuration object with application settings, including
+                      BigQuery table IDs and the analysis API URL.
+        """
         self.settings = settings
         self._bigquery_repo = None
         self.git_processor = GitFileProcessor()
-        self.tag_extractor = RegionTagExtractor()
+        self.api_url = "http://localhost:8090/analyze_github_link"
 
     @property
     def bigquery_repo(self):
@@ -31,10 +38,6 @@ class CodeProcessor:
         return self._bigquery_repo
 
     def process_file(self, file_path, regen=False):
-        strategy = get_strategy(file_path, self.settings)
-        if not strategy:
-            raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")
-
         git_info = self._get_git_info(file_path)
 
         if regen:
@@ -46,11 +49,9 @@ class CodeProcessor:
             logger.info(f"{file_path} already processed and up-to-date, skipping.")
             return "skipped"
 
-        analysis_result = self._analyze_file(file_path, strategy, git_info)
+        analysis_result = self._analyze_file(file_path, git_info)
 
-        bigquery_row = self._build_bigquery_row(
-            analysis_result, strategy.language, file_path
-        )
+        bigquery_row = self._build_bigquery_row(analysis_result, file_path)
         self._save_result(bigquery_row)
         return "processed"
 
@@ -58,7 +59,6 @@ class CodeProcessor:
         github_link = git_info["github_link"]
         last_updated = git_info.get("last_updated")
 
-        # Convert last_updated string to date object if it's not None
         if last_updated:
             last_updated_dt = datetime.strptime(last_updated, "%Y-%m-%d").date()
         else:
@@ -71,17 +71,13 @@ class CodeProcessor:
             and "last_updated" in existing_record
             and existing_record["last_updated"]
         ):
-            # Ensure existing_record['last_updated'] is a date object for comparison
             if isinstance(existing_record["last_updated"], datetime):
                 existing_last_updated_dt = existing_record["last_updated"].date()
             else:
-                # Assuming it's a string in 'YYYY-MM-DD' format
                 existing_last_updated_dt = datetime.strptime(
                     str(existing_record["last_updated"]), "%Y-%m-%d"
                 ).date()
-
             return existing_last_updated_dt == last_updated_dt
-
         return False
 
     def _get_git_info(self, file_path):
@@ -90,87 +86,58 @@ class CodeProcessor:
             raise GitRepositoryError(f"File not in git repository: {file_path}")
         return git_info
 
-    def _build_bigquery_row(self, analysis_result, language, file_path):
-        git_info = analysis_result.git_info
-        evaluation_data = analysis_result.evaluation_data
+    def _call_analysis_api(self, github_link):
+        """Calls the analysis API and returns the JSON response."""
+        headers = {"Content-Type": "application/json"}
+        data = {"github_link": github_link}
+        try:
+            response = requests.post(self.api_url, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API call failed for {github_link}: {e}")
+            raise APIError(f"API call failed for {github_link}: {e}")
+
+    def _build_bigquery_row(self, analysis_result, file_path):
+        git_info = analysis_result.get("git_info", {})
+        api_analysis = analysis_result.get("analysis", {})
+        assessment_data = api_analysis.get("assessment", {})
+
+        logger.info(f"Extracted assessment data for BQ: {assessment_data}")
+
+        if not assessment_data:
+            raise APIError(f"API response for {git_info.get('github_link')} is missing the 'assessment' object.")
 
         return {
             "github_link": git_info.get("github_link"),
             "file_path": file_path,
             "github_owner": git_info.get("github_owner"),
             "github_repo": git_info.get("github_repo"),
-            "product_category": evaluation_data.get("product_category"),
-            "product_name": evaluation_data.get("product_name"),
-            "language": language,
-            "overall_compliance_score": evaluation_data.get("overall_compliance_score"),
-            "evaluation_data": json.dumps(evaluation_data),
-            "region_tags": analysis_result.region_tags,
-            "raw_code": analysis_result.raw_code,
-            "evaluation_date": analysis_result.evaluation_date,
+            "product_category": api_analysis.get("product_category"),
+            "product_name": api_analysis.get("product_name"),
+            "language": api_analysis.get("language"),
+            "overall_compliance_score": assessment_data.get("overall_compliance_score"),
+            "evaluation_data": json.dumps(assessment_data),
+            "region_tags": api_analysis.get("region_tags"),
+            "raw_code": self._read_raw_code(file_path),
+            "evaluation_date": datetime.now().isoformat(),
             "last_updated": git_info.get("last_updated"),
             "branch_name": git_info.get("branch_name"),
             "commit_history": json.dumps(git_info.get("commit_history")),
             "metadata": json.dumps(git_info.get("metadata")),
+            "validation_details": json.dumps(analysis_result.get("validation_history")),
         }
 
-    def _analyze_file(self, file_path, strategy, git_info):
-        region_tags = self.tag_extractor.execute(file_path)
-        if not region_tags:
-            raise NoRegionTagsError("File not analyzed, no region tags")
-
-        # First, evaluate the code as before to get the LLM's analysis
-        evaluation_data = self._evaluate_code(
-            strategy, file_path, region_tags[0], git_info["github_link"]
-        )
-        raw_code = self._read_raw_code(file_path)
-
-        # Now, use the new, more reliable product categorization logic
-        row_data = {
-            "indexed_source_url": git_info.get("github_link"),
-            "region_tag": region_tags[0] if region_tags else "",
-            "repository_name": git_info.get("github_repo"),
+    def _analyze_file(self, file_path, git_info):
+        github_link = git_info["github_link"]
+        api_response = self._call_analysis_api(github_link)
+        
+        # Combine git_info with the API response to pass to build_bigquery_row
+        combined_result = {
+            "git_info": git_info,
+            **api_response
         }
-        product_category, product_name, llm_determined = categorize_sample(
-            row_data, raw_code, llm_fallback=True
-        )
-
-        # Update the evaluation data with the new product info, overwriting
-        # whatever the LLM might have provided for these specific fields.
-        evaluation_data["product_category"] = product_category
-        evaluation_data["product_name"] = product_name
-        evaluation_data["llm_determined"] = llm_determined
-
-        return AnalysisResult(
-            git_info=git_info,
-            region_tags=region_tags,
-            evaluation_data=evaluation_data,
-            raw_code=raw_code,
-        )
-
-    def _evaluate_code(self, strategy, file_path, region_tag, github_link):
-        style_info = strategy.evaluate_code(file_path, region_tag, github_link)
-
-        match = re.search(r"```json\s*({.*})\s*```", style_info, re.DOTALL)
-        if match:
-            cleaned_text = match.group(1)
-        else:
-            cleaned_text = style_info.strip()
-
-        cleaned_text = re.sub(r",\s*([\]}])", r"\1", cleaned_text)
-
-        try:
-            return json.loads(cleaned_text)
-        except json.JSONDecodeError as e:
-            logger.warning(
-                f"Initial JSON parsing failed: {e}. Attempting to fix with lenient parser."
-            )
-            try:
-                return demjson3.decode(cleaned_text)
-            except demjson3.JSONDecodeError as e2:
-                logger.error(f"JSON parsing failed even with lenient parser: {e2}")
-                logger.error(f"Malformed JSON text: {cleaned_text}")
-                raise e2
-
+        return combined_result
 
     def _read_raw_code(self, file_path):
         try:
@@ -182,48 +149,33 @@ class CodeProcessor:
     def _save_result(self, row):
         self.bigquery_repo.create(row)
 
-    def categorize_file_only(self, file_path):
-        """
-        Analyzes a single file for product categorization only.
-        """
-        git_info = self._get_git_info(file_path)
-        region_tags = self.tag_extractor.execute(file_path)
-        if not region_tags:
-            return None
-
-        raw_code = self._read_raw_code(file_path)
-        row_data = {
-            "indexed_source_url": git_info.get("github_link"),
-            "region_tag": region_tags[0],
-            "repository_name": git_info.get("github_repo"),
-        }
-        product_category, product_name, llm_determined = categorize_sample(
-            row_data, raw_code, llm_fallback=True
-        )
-
-        return {
-            "indexed_source_url": git_info.get("github_link"),
-            "region_tag": region_tags[0],
-            "repository_name": git_info.get("github_repo"),
-            "product_category": product_category,
-            "product_name": product_name,
-            "llm_determined": llm_determined,
-        }
-
     def close(self):
         if self._bigquery_repo:
             self._bigquery_repo.close()
 
     def analyze_file_only(self, file_path):
         """
-        Analyzes a single file without any database interaction.
+        Analyzes a single file without any database interaction, returning the full API response.
         """
-        strategy = get_strategy(file_path, self.settings)
-        if not strategy:
-            raise UnsupportedFileTypeError(f"Unsupported file type: {file_path}")
-
         git_info = self._get_git_info(file_path)
-        analysis_result = self._analyze_file(file_path, strategy, git_info)
-        if analysis_result:
-            return asdict(analysis_result)
-        return None
+        github_link = git_info["github_link"]
+        return self._call_analysis_api(github_link)
+
+    def categorize_file_only(self, file_path):
+        """
+        Analyzes a single file for product categorization only.
+        """
+        git_info = self._get_git_info(file_path)
+        github_link = git_info["github_link"]
+        api_response = self._call_analysis_api(github_link)
+        
+        api_analysis = api_response.get("analysis", {})
+        
+        return {
+            "indexed_source_url": github_link,
+            "region_tag": api_analysis.get("region_tags", [None])[0],
+            "repository_name": git_info.get("github_repo"),
+            "product_category": api_analysis.get("product_category"),
+            "product_name": api_analysis.get("product_name"),
+            "llm_determined": True,  # This is now always determined by the API
+        }

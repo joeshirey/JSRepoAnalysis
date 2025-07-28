@@ -12,7 +12,6 @@ from collections import defaultdict
 from urllib.parse import urlparse
 from config import settings
 from tools.code_processor import CodeProcessor
-from strategies.strategy_factory import get_strategy
 from utils.logger import logger
 from utils.exceptions import NoRegionTagsError
 
@@ -124,36 +123,31 @@ def get_files_from_csv(csv_path, max_workers):
 
 
 def process_file_wrapper(
-    processor,
-    file_path,
-    regen,
-    error_logger,
-    processed_counts,
-    skipped_counts,
-    errored_counts,
+    processor: CodeProcessor,
+    file_path: str,
+    regen: bool,
+    error_logger: logging.Logger,
+    processed_counts: defaultdict,
+    skipped_counts: defaultdict,
+    errored_counts: defaultdict,
 ):
+    """
+    Wrapper function to process a single file, handle exceptions, and update counters.
+    Invokes the CodeProcessor to perform analysis via an external API.
+    """
     file_extension = os.path.splitext(file_path)[1]
-    strategy = get_strategy(file_path, settings)
-
-    if strategy:
-        try:
-            logger.info(f"Processing file: {file_path}")
-            status = processor.process_file(file_path, regen=regen)
-            if status == "processed":
-                processed_counts[file_extension] += 1
-                logger.info(f"Finished processing file: {file_path}")
-            elif status == "skipped":
-                skipped_counts[file_extension] += 1
-        except NoRegionTagsError as e:
-            logger.info(f"Skipping file {file_path}: {e}")
+    try:
+        logger.info(f"Processing file: {file_path}")
+        status = processor.process_file(file_path, regen=regen)
+        if status == "processed":
+            processed_counts[file_extension] += 1
+            logger.info(f"Finished processing file: {file_path}")
+        elif status == "skipped":
             skipped_counts[file_extension] += 1
-        except Exception as e:
-            logger.error(f"Error processing file {file_path}: {e}")
-            error_logger.error(file_path)
-            errored_counts[file_extension] += 1
-    else:
-        logger.info(f"Skipping unsupported file type: {file_path}")
-        skipped_counts[file_extension] += 1
+    except Exception as e:
+        logger.error(f"Error processing file {file_path}: {e}")
+        error_logger.error(file_path)
+        errored_counts[file_extension] += 1
 
 
 def categorize_file_wrapper(processor, file_path, csv_writer):
