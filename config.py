@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     FIRESTORE_DB: str
     BIGQUERY_DATASET: str
     BIGQUERY_TABLE: str
+    API_URL: str
     GOOGLE_GENAI_USE_VERTEXAI: bool = True
 
 

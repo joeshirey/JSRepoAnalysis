@@ -29,7 +29,7 @@ class CodeProcessor:
         self.settings = settings
         self._bigquery_repo = None
         self.git_processor = GitFileProcessor()
-        self.api_url = "http://localhost:8090/analyze_github_link"
+        self.api_url = settings.API_URL
 
     @property
     def bigquery_repo(self):

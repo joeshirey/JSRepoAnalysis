@@ -6,6 +6,7 @@ import csv
 import re
 import sys
 import subprocess
+import threading
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
@@ -130,6 +131,8 @@ def process_file_wrapper(
     processed_counts: defaultdict,
     skipped_counts: defaultdict,
     errored_counts: defaultdict,
+    consecutive_errors: list,
+    error_lock: threading.Lock,
 ):
     """
     Wrapper function to process a single file, handle exceptions, and update counters.
@@ -144,10 +147,25 @@ def process_file_wrapper(
             logger.info(f"Finished processing file: {file_path}")
         elif status == "skipped":
             skipped_counts[file_extension] += 1
+        
+        with error_lock:
+            consecutive_errors[0] = 0
+            
     except Exception as e:
         logger.error(f"Error processing file {file_path}: {e}")
         error_logger.error(file_path)
         errored_counts[file_extension] += 1
+        with error_lock:
+            consecutive_errors[0] += 1
+            if consecutive_errors[0] >= 5:
+                logger.warning("Five consecutive errors detected. Pausing execution.")
+                user_input = input("Enter 'resume' to continue or 'stop' to abort: ")
+                if user_input.lower() == 'stop':
+                    # A more graceful shutdown might be needed depending on application complexity
+                    os._exit(1)
+                else:
+                    logger.info("Resuming execution.")
+                    consecutive_errors[0] = 0
 
 
 def categorize_file_wrapper(processor, file_path, csv_writer):
@@ -252,7 +270,7 @@ def main():
         help="Run in categorization-only mode.",
     )
     parser.add_argument(
-        "--workers", type=int, default=10, help="Number of parallel threads to use."
+        "--workers", type=int, default=5, help="Number of parallel threads to use."
     )
     args = parser.parse_args()
 
@@ -333,6 +351,8 @@ def main():
     processed_counts = defaultdict(int)
     skipped_counts = defaultdict(int)
     errored_counts = defaultdict(int)
+    consecutive_errors = [0]
+    error_lock = threading.Lock()
 
     processor = CodeProcessor(settings)
     try:
@@ -347,6 +367,8 @@ def main():
                     processed_counts,
                     skipped_counts,
                     errored_counts,
+                    consecutive_errors,
+                    error_lock,
                 )
                 for file in files_to_process
             ]
