@@ -29,28 +29,29 @@ class BigQueryRepository:
         except Exception as e:
             raise BigQueryError(f"Error writing document to BigQuery: {e}")
 
-    def read(self, github_link: str) -> Dict[str, Any]:
+    def record_exists(self, github_link: str, last_updated: str) -> bool:
         """
-        Reads the latest record from BigQuery for a given GitHub link.
+        Checks if a record with the given github_link and last_updated date
+        already exists in BigQuery.
         """
+        if not last_updated:
+            return False
+            
         try:
             query = f"""
-                SELECT last_updated
+                SELECT COUNT(1)
                 FROM `{self.table_id}`
-                WHERE github_link = @github_link
-                ORDER BY evaluation_date DESC
-                LIMIT 1
+                WHERE github_link = @github_link AND last_updated = @last_updated
             """
             job_config = bigquery.QueryJobConfig(
                 query_parameters=[
                     bigquery.ScalarQueryParameter("github_link", "STRING", github_link),
+                    bigquery.ScalarQueryParameter("last_updated", "DATE", last_updated),
                 ]
             )
             query_job = self._db.query(query, job_config=job_config)
             rows = list(query_job)
-            if rows:
-                return dict(rows[0])
-            return None
+            return rows[0][0] > 0
         except Exception as e:
             raise BigQueryError(f"Error reading from BigQuery: {e}")
 

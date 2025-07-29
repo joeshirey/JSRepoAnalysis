@@ -58,27 +58,7 @@ class CodeProcessor:
     def _is_already_processed(self, git_info):
         github_link = git_info["github_link"]
         last_updated = git_info.get("last_updated")
-
-        if last_updated:
-            last_updated_dt = datetime.strptime(last_updated, "%Y-%m-%d").date()
-        else:
-            last_updated_dt = None
-
-        existing_record = self.bigquery_repo.read(github_link)
-
-        if (
-            existing_record
-            and "last_updated" in existing_record
-            and existing_record["last_updated"]
-        ):
-            if isinstance(existing_record["last_updated"], datetime):
-                existing_last_updated_dt = existing_record["last_updated"].date()
-            else:
-                existing_last_updated_dt = datetime.strptime(
-                    str(existing_record["last_updated"]), "%Y-%m-%d"
-                ).date()
-            return existing_last_updated_dt == last_updated_dt
-        return False
+        return self.bigquery_repo.record_exists(github_link, last_updated)
 
     def _get_git_info(self, file_path):
         git_info = self.git_processor.execute(file_path)
