@@ -12,4 +12,5 @@ pytest
 pydantic-settings
 PyYAML
 google-cloud-aiplatform
-requeststqdm
+requests
+tqdm
