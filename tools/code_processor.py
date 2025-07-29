@@ -103,8 +103,6 @@ class CodeProcessor:
         api_analysis = analysis_result.get("analysis", {})
         assessment_data = api_analysis.get("assessment", {})
 
-        logger.info(f"Extracted assessment data for BQ: {assessment_data}")
-
         if not assessment_data:
             raise APIError(f"API response for {git_info.get('github_link')} is missing the 'assessment' object.")
 

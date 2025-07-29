@@ -11,6 +11,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from urllib.parse import urlparse
+from tqdm import tqdm
 from config import settings
 from tools.code_processor import CodeProcessor
 from utils.logger import logger
@@ -60,9 +61,6 @@ def get_files_from_csv(csv_path, max_workers):
 
         try:
             if os.path.exists(target_dir):
-                logger.info(
-                    f"Repository {repo} already exists. Pulling latest changes..."
-                )
                 default_branch = get_default_branch(repo_url)
                 subprocess.run(
                     ["git", "-C", target_dir, "checkout", default_branch],
@@ -77,7 +75,6 @@ def get_files_from_csv(csv_path, max_workers):
                     text=True,
                 )
             else:
-                logger.info(f"Cloning {repo_url} into {target_dir}...")
                 subprocess.run(
                     ["git", "clone", repo_url, target_dir],
                     check=True,
@@ -97,8 +94,7 @@ def get_files_from_csv(csv_path, max_workers):
         for future in as_completed(future_to_repo):
             repo = future_to_repo[future]
             try:
-                result = future.result()
-                logger.info(result)
+                future.result()
             except Exception as exc:
                 logger.error(f"{repo} generated an exception: {exc}")
 
@@ -140,11 +136,9 @@ def process_file_wrapper(
     """
     file_extension = os.path.splitext(file_path)[1]
     try:
-        logger.info(f"Processing file: {file_path}")
         status = processor.process_file(file_path, regen=regen)
         if status == "processed":
             processed_counts[file_extension] += 1
-            logger.info(f"Finished processing file: {file_path}")
         elif status == "skipped":
             skipped_counts[file_extension] += 1
         
@@ -218,20 +212,11 @@ def categorize_only(input_path, max_workers):
             writer.writeheader()
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = [
+                futures = {
                     executor.submit(categorize_file_wrapper, processor, file, writer)
                     for file in files_to_process
-                ]
-
-                processed_count = 0
-                total_files = len(files_to_process)
-                for future in as_completed(futures):
-                    processed_count += 1
-                    progress = (processed_count / total_files) * 100
-                    sys.stdout.write(
-                        f"\rProgress: {processed_count}/{total_files} files categorized ({progress:.2f}%)"
-                    )
-                    sys.stdout.flush()
+                }
+                for future in tqdm(as_completed(futures), total=len(futures), desc="Categorizing files"):
                     future.result()
 
     finally:
@@ -357,7 +342,7 @@ def main():
     processor = CodeProcessor(settings)
     try:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = [
+            futures = {
                 executor.submit(
                     process_file_wrapper,
                     processor,
@@ -371,17 +356,8 @@ def main():
                     error_lock,
                 )
                 for file in files_to_process
-            ]
-
-            processed_count = 0
-            total_files = len(files_to_process)
-            for future in as_completed(futures):
-                processed_count += 1
-                progress = (processed_count / total_files) * 100
-                sys.stdout.write(
-                    f"\rProgress: {processed_count}/{total_files} files processed ({progress:.2f}%)"
-                )
-                sys.stdout.flush()
+            }
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing files"):
                 future.result()
     finally:
         processor.close()
