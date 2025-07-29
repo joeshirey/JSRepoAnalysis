@@ -31,9 +31,10 @@ jobs:
         GOOGLE_CLOUD_PROJECT: "test-project"
         GOOGLE_CLOUD_LOCATION: "test-location"
         VERTEXAI_MODEL_NAME: "test-model"
-        FIRESTORE_DB: "test-db"
-        BIGQUERY_DATASET: "test-dataset"
-        BIGQUERY_TABLE: "test-table"
+        FIRESTORE_DB: test-db
+        BIGQUERY_DATASET: test-dataset
+        BIGQUERY_TABLE: test-table
+        API_URL: http://localhost:8090/test
       run: |
         export PYTHONPATH=.
         pytest
