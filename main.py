@@ -6,13 +6,14 @@ import csv
 import re
 import sys
 import subprocess
+import threading
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from urllib.parse import urlparse
+from tqdm import tqdm
 from config import settings
 from tools.code_processor import CodeProcessor
-from strategies.strategy_factory import get_strategy
 from utils.logger import logger
 from utils.exceptions import NoRegionTagsError
 
@@ -60,9 +61,6 @@ def get_files_from_csv(csv_path, max_workers):
 
         try:
             if os.path.exists(target_dir):
-                logger.info(
-                    f"Repository {repo} already exists. Pulling latest changes..."
-                )
                 default_branch = get_default_branch(repo_url)
                 subprocess.run(
                     ["git", "-C", target_dir, "checkout", default_branch],
@@ -77,7 +75,6 @@ def get_files_from_csv(csv_path, max_workers):
                     text=True,
                 )
             else:
-                logger.info(f"Cloning {repo_url} into {target_dir}...")
                 subprocess.run(
                     ["git", "clone", repo_url, target_dir],
                     check=True,
@@ -97,8 +94,7 @@ def get_files_from_csv(csv_path, max_workers):
         for future in as_completed(future_to_repo):
             repo = future_to_repo[future]
             try:
-                result = future.result()
-                logger.info(result)
+                future.result()
             except Exception as exc:
                 logger.error(f"{repo} generated an exception: {exc}")
 
@@ -124,36 +120,46 @@ def get_files_from_csv(csv_path, max_workers):
 
 
 def process_file_wrapper(
-    processor,
-    file_path,
-    regen,
-    error_logger,
-    processed_counts,
-    skipped_counts,
-    errored_counts,
+    processor: CodeProcessor,
+    file_path: str,
+    regen: bool,
+    error_logger: logging.Logger,
+    processed_counts: defaultdict,
+    skipped_counts: defaultdict,
+    errored_counts: defaultdict,
+    consecutive_errors: list,
+    error_lock: threading.Lock,
 ):
+    """
+    Wrapper function to process a single file, handle exceptions, and update counters.
+    Invokes the CodeProcessor to perform analysis via an external API.
+    """
     file_extension = os.path.splitext(file_path)[1]
-    strategy = get_strategy(file_path, settings)
-
-    if strategy:
-        try:
-            logger.info(f"Processing file: {file_path}")
-            status = processor.process_file(file_path, regen=regen)
-            if status == "processed":
-                processed_counts[file_extension] += 1
-                logger.info(f"Finished processing file: {file_path}")
-            elif status == "skipped":
-                skipped_counts[file_extension] += 1
-        except NoRegionTagsError as e:
-            logger.info(f"Skipping file {file_path}: {e}")
+    try:
+        status = processor.process_file(file_path, regen=regen)
+        if status == "processed":
+            processed_counts[file_extension] += 1
+        elif status == "skipped":
             skipped_counts[file_extension] += 1
-        except Exception as e:
-            logger.error(f"Error processing file {file_path}: {e}")
-            error_logger.error(file_path)
-            errored_counts[file_extension] += 1
-    else:
-        logger.info(f"Skipping unsupported file type: {file_path}")
-        skipped_counts[file_extension] += 1
+        
+        with error_lock:
+            consecutive_errors[0] = 0
+            
+    except Exception as e:
+        logger.error(f"Error processing file {file_path}: {e}")
+        error_logger.error(file_path)
+        errored_counts[file_extension] += 1
+        with error_lock:
+            consecutive_errors[0] += 1
+            if consecutive_errors[0] >= 5:
+                logger.warning("Five consecutive errors detected. Pausing execution.")
+                user_input = input("Enter 'resume' to continue or 'stop' to abort: ")
+                if user_input.lower() == 'stop':
+                    # A more graceful shutdown might be needed depending on application complexity
+                    os._exit(1)
+                else:
+                    logger.info("Resuming execution.")
+                    consecutive_errors[0] = 0
 
 
 def categorize_file_wrapper(processor, file_path, csv_writer):
@@ -206,20 +212,11 @@ def categorize_only(input_path, max_workers):
             writer.writeheader()
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = [
+                futures = {
                     executor.submit(categorize_file_wrapper, processor, file, writer)
                     for file in files_to_process
-                ]
-
-                processed_count = 0
-                total_files = len(files_to_process)
-                for future in as_completed(futures):
-                    processed_count += 1
-                    progress = (processed_count / total_files) * 100
-                    sys.stdout.write(
-                        f"\rProgress: {processed_count}/{total_files} files categorized ({progress:.2f}%)"
-                    )
-                    sys.stdout.flush()
+                }
+                for future in tqdm(as_completed(futures), total=len(futures), desc="Categorizing files"):
                     future.result()
 
     finally:
@@ -258,7 +255,7 @@ def main():
         help="Run in categorization-only mode.",
     )
     parser.add_argument(
-        "--workers", type=int, default=10, help="Number of parallel threads to use."
+        "--workers", type=int, default=5, help="Number of parallel threads to use."
     )
     args = parser.parse_args()
 
@@ -339,11 +336,13 @@ def main():
     processed_counts = defaultdict(int)
     skipped_counts = defaultdict(int)
     errored_counts = defaultdict(int)
+    consecutive_errors = [0]
+    error_lock = threading.Lock()
 
     processor = CodeProcessor(settings)
     try:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = [
+            futures = {
                 executor.submit(
                     process_file_wrapper,
                     processor,
@@ -353,19 +352,12 @@ def main():
                     processed_counts,
                     skipped_counts,
                     errored_counts,
+                    consecutive_errors,
+                    error_lock,
                 )
                 for file in files_to_process
-            ]
-
-            processed_count = 0
-            total_files = len(files_to_process)
-            for future in as_completed(futures):
-                processed_count += 1
-                progress = (processed_count / total_files) * 100
-                sys.stdout.write(
-                    f"\rProgress: {processed_count}/{total_files} files processed ({progress:.2f}%)"
-                )
-                sys.stdout.flush()
+            }
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing files"):
                 future.result()
     finally:
         processor.close()

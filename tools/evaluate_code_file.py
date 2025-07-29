@@ -87,7 +87,7 @@ class CodeEvaluator(BaseTool):
         except Exception as e:
             raise CodeEvaluatorError(f"Error reading JSON conversion prompt file: {e}")
 
-        json_prompt = json_prompt_template.replace("{{text}}", analysis_text)
+        json_prompt = json_prompt_template.replace("{{text}}", analysis_text or "")
 
         # Grounding is not needed for this second, simpler formatting task.
         json_generation_config = types.GenerateContentConfig(

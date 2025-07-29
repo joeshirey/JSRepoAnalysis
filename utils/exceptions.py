@@ -4,12 +4,6 @@ class CodeProcessorError(Exception):
     pass
 
 
-class UnsupportedFileTypeError(CodeProcessorError):
-    """Raised when a file type is not supported."""
-
-    pass
-
-
 class GitRepositoryError(CodeProcessorError):
     """Raised when a file is not in a git repository."""
 
@@ -18,6 +12,12 @@ class GitRepositoryError(CodeProcessorError):
 
 class NoRegionTagsError(CodeProcessorError):
     """Raised when no region tags are found in a file."""
+
+    pass
+
+
+class APIError(CodeProcessorError):
+    """Raised when the analysis API call fails."""
 
     pass
 
@@ -50,3 +50,4 @@ class CodeEvaluatorError(Exception):
     """Base class for exceptions in the code evaluator."""
 
     pass
+
