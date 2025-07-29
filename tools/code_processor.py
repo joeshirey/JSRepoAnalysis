@@ -51,6 +51,9 @@ class CodeProcessor:
 
         analysis_result = self._analyze_file(file_path, git_info)
 
+        if analysis_result is None:
+            return "skipped"
+
         bigquery_row = self._build_bigquery_row(analysis_result, file_path)
         self._save_result(bigquery_row)
         return "processed"
@@ -109,6 +112,12 @@ class CodeProcessor:
     def _analyze_file(self, file_path, git_info):
         github_link = git_info["github_link"]
         api_response = self._call_analysis_api(github_link)
+
+        # Check for an error message from the API and skip the file if present.
+        if "analysis" in api_response and "error" in api_response["analysis"]:
+            error_message = api_response["analysis"]["error"]
+            logger.info(f"Skipping file {github_link}: {error_message}")
+            return None
         
         # Combine git_info with the API response to pass to build_bigquery_row
         combined_result = {
