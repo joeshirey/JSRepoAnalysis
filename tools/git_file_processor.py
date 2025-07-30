@@ -68,9 +68,7 @@ class GitFileProcessor(BaseTool):
                 .decode("utf-8")
                 .strip()
             )
-            match = re.search(
-                r"github.com(?:[:/]|@)(.*?)/(.*?)(?:\.git)?$", remote_url
-            )
+            match = re.search(r"github.com(?:[:/]|@)(.*?)/(.*?)(?:\.git)?$", remote_url)
             if match:
                 owner = match.group(1)
                 repo = match.group(2)
@@ -151,12 +149,12 @@ class GitFileProcessor(BaseTool):
 
             commits = []
             # Split by the record separator
-            for entry in git_log.strip().split('\x1e'):
+            for entry in git_log.strip().split("\x1e"):
                 if not entry:
                     continue
 
                 # Split by the null byte field separator
-                parts = entry.split('\x00')
+                parts = entry.split("\x00")
                 if len(parts) == 5:
                     commit_hash, author_name, author_email, date, message = parts
                     commits.append(

@@ -36,7 +36,7 @@ class BigQueryRepository:
         """
         if not last_updated:
             return False
-            
+
         try:
             query = f"""
                 SELECT COUNT(1)

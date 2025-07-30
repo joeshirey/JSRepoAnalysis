@@ -50,4 +50,3 @@ class CodeEvaluatorError(Exception):
     """Base class for exceptions in the code evaluator."""
 
     pass
-

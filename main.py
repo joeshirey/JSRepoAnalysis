@@ -4,7 +4,6 @@ import logging
 import json
 import csv
 import re
-import sys
 import subprocess
 import threading
 from datetime import datetime
@@ -15,7 +14,6 @@ from tqdm import tqdm
 from config import settings
 from tools.code_processor import CodeProcessor
 from utils.logger import logger
-from utils.exceptions import NoRegionTagsError
 
 
 def get_files_from_csv(csv_path, max_workers):
@@ -141,10 +139,10 @@ def process_file_wrapper(
             processed_counts[file_extension] += 1
         elif status == "skipped":
             skipped_counts[file_extension] += 1
-        
+
         with error_lock:
             consecutive_errors[0] = 0
-            
+
     except Exception as e:
         logger.error(f"Error processing file {file_path}: {e}")
         error_logger.error(file_path)
@@ -154,7 +152,7 @@ def process_file_wrapper(
             if consecutive_errors[0] >= 5:
                 logger.warning("Five consecutive errors detected. Pausing execution.")
                 user_input = input("Enter 'resume' to continue or 'stop' to abort: ")
-                if user_input.lower() == 'stop':
+                if user_input.lower() == "stop":
                     # A more graceful shutdown might be needed depending on application complexity
                     os._exit(1)
                 else:
@@ -216,7 +214,9 @@ def categorize_only(input_path, max_workers):
                     executor.submit(categorize_file_wrapper, processor, file, writer)
                     for file in files_to_process
                 }
-                for future in tqdm(as_completed(futures), total=len(futures), desc="Categorizing files"):
+                for future in tqdm(
+                    as_completed(futures), total=len(futures), desc="Categorizing files"
+                ):
                     future.result()
 
     finally:
@@ -262,7 +262,9 @@ def main():
     if args.categorize_only:
         input_path = args.from_csv or args.file_link
         if not input_path:
-            parser.error("--categorize-only requires an input path from --from-csv or file_link.")
+            parser.error(
+                "--categorize-only requires an input path from --from-csv or file_link."
+            )
         categorize_only(input_path, args.workers)
         return
 
@@ -357,7 +359,9 @@ def main():
                 )
                 for file in files_to_process
             }
-            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing files"):
+            for future in tqdm(
+                as_completed(futures), total=len(futures), desc="Processing files"
+            ):
                 future.result()
     finally:
         processor.close()

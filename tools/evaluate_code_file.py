@@ -1,5 +1,4 @@
 from .base_tool import BaseTool
-import json
 import re
 import time
 from google import genai
@@ -17,6 +16,7 @@ class CodeEvaluator(BaseTool):
     JSON evaluation. The first LLM call performs the core analysis with web
     grounding, and the second call formats the analysis into a clean JSON object.
     """
+
     def __init__(self, config):
         self.config = config
         try:
@@ -127,7 +127,9 @@ class CodeEvaluator(BaseTool):
         prompt = prompt.replace("{{uri}}", github_link)
         prompt = prompt.replace("{{region_tag}}", region_tag)
         prompt = prompt.replace("{{code}}", code_sample)
-        prompt = prompt.replace("{{cleaned_code}}", self.remove_comments(code_sample, language))
+        prompt = prompt.replace(
+            "{{cleaned_code}}", self.remove_comments(code_sample, language)
+        )
         return prompt
 
     def remove_comments(self, code: str, language: str) -> str:
@@ -137,7 +139,19 @@ class CodeEvaluator(BaseTool):
         if language.lower() in ["python", "shell", "ruby"]:
             # Removes single-line comments starting with #
             return re.sub(r"#.*", "", code)
-        elif language.lower() in ["javascript", "java", "c", "c++", "c#", "go", "swift", "typescript", "kotlin", "rust", "php"]:
+        elif language.lower() in [
+            "javascript",
+            "java",
+            "c",
+            "c++",
+            "c#",
+            "go",
+            "swift",
+            "typescript",
+            "kotlin",
+            "rust",
+            "php",
+        ]:
             # Removes single-line // comments and multi-line /* ... */ comments
             code = re.sub(r"//.*", "", code)
             code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from tools.code_processor import CodeProcessor
 from config import settings
 
@@ -49,12 +49,8 @@ class TestCodeProcessorHappyPath(unittest.TestCase):
         # Assert
         mock_get_git_info.assert_called_once_with(file_path)
         mock_is_already_processed.assert_called_once_with(mock_git_info)
-        mock_analyze_file.assert_called_once_with(
-            file_path, mock_git_info
-        )
-        mock_build_bigquery_row.assert_called_once_with(
-            mock_analysis_result, file_path
-        )
+        mock_analyze_file.assert_called_once_with(file_path, mock_git_info)
+        mock_build_bigquery_row.assert_called_once_with(mock_analysis_result, file_path)
         mock_save_result.assert_called_once_with(mock_bq_row)
 
 

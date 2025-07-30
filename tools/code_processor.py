@@ -18,6 +18,7 @@ class CodeProcessor:
     given file. It fetches Git metadata, calls an external API for a detailed
     code evaluation, and then writes the combined results to a BigQuery table.
     """
+
     def __init__(self, settings):
         """
         Initializes the CodeProcessor.
@@ -69,10 +70,10 @@ class CodeProcessor:
             raise GitRepositoryError(f"File not in git repository: {file_path}")
         return git_info
 
-    def _call_analysis_api(self, github_link):
+    def _call_analysis_api(self, github_link, code):
         """Calls the analysis API and returns the JSON response."""
         headers = {"Content-Type": "application/json"}
-        data = {"github_link": github_link}
+        data = {"github_link": github_link, "code": code}
         try:
             response = requests.post(self.api_url, headers=headers, json=data)
             response.raise_for_status()
@@ -87,7 +88,9 @@ class CodeProcessor:
         assessment_data = api_analysis.get("assessment", {})
 
         if not assessment_data:
-            raise APIError(f"API response for {git_info.get('github_link')} is missing the 'assessment' object.")
+            raise APIError(
+                f"API response for {git_info.get('github_link')} is missing the 'assessment' object."
+            )
 
         return {
             "github_link": git_info.get("github_link"),
@@ -111,19 +114,17 @@ class CodeProcessor:
 
     def _analyze_file(self, file_path, git_info):
         github_link = git_info["github_link"]
-        api_response = self._call_analysis_api(github_link)
+        code = self._read_raw_code(file_path)
+        api_response = self._call_analysis_api(github_link, code)
 
         # Check for an error message from the API and skip the file if present.
         if "analysis" in api_response and "error" in api_response["analysis"]:
             error_message = api_response["analysis"]["error"]
             logger.info(f"Skipping file {github_link}: {error_message}")
             return None
-        
+
         # Combine git_info with the API response to pass to build_bigquery_row
-        combined_result = {
-            "git_info": git_info,
-            **api_response
-        }
+        combined_result = {"git_info": git_info, **api_response}
         return combined_result
 
     def _read_raw_code(self, file_path):
@@ -146,7 +147,8 @@ class CodeProcessor:
         """
         git_info = self._get_git_info(file_path)
         github_link = git_info["github_link"]
-        return self._call_analysis_api(github_link)
+        code = self._read_raw_code(file_path)
+        return self._call_analysis_api(github_link, code)
 
     def categorize_file_only(self, file_path):
         """
@@ -154,10 +156,11 @@ class CodeProcessor:
         """
         git_info = self._get_git_info(file_path)
         github_link = git_info["github_link"]
-        api_response = self._call_analysis_api(github_link)
-        
+        code = self._read_raw_code(file_path)
+        api_response = self._call_analysis_api(github_link, code)
+
         api_analysis = api_response.get("analysis", {})
-        
+
         return {
             "indexed_source_url": github_link,
             "region_tag": api_analysis.get("region_tags", [None])[0],

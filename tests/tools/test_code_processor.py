@@ -1,12 +1,11 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from config import settings
 from tools.code_processor import CodeProcessor
 from utils.exceptions import (
     GitRepositoryError,
     APIError,
 )
-import json
 
 
 class TestCodeProcessor(unittest.TestCase):
