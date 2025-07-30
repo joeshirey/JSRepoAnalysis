@@ -1,10 +1,10 @@
-CREATE OR REPLACE VIEW `your_dataset.repo_analysis_view` AS
+CREATE OR REPLACE VIEW `panoply-ai-dev.Samples_Health.repo_analysis_view` AS
 WITH RankedAnalysis AS (
     SELECT
         *,
         ROW_NUMBER() OVER(PARTITION BY github_link ORDER BY evaluation_date DESC) as rn
     FROM
-        `your_dataset.repo_analysis`
+        `panoply-ai-dev.Samples_Health.repo_analysis`
 )
 SELECT
     -- Direct columns from the new table
@@ -19,6 +19,7 @@ SELECT
     t.raw_code,
     t.overall_compliance_score,
     t.language AS sample_language,
+    t.validation_details AS validation_details,
 
     -- Extract identified generic problem categories from the JSON
     JSON_EXTRACT_ARRAY(t.evaluation_data, '$.identified_generic_problem_categories') AS identified_generic_problem_categories,

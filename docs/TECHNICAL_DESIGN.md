@@ -25,8 +25,7 @@ graph TD
     B --> O[Output CSV];
 
     F --> K[Git File Processor];
-    F --> L[Analysis API];
-    L --> J[AI Analysis Engine];
+    F --> L[External Analysis API];
     
     F --> M[BigQuery Repository];
     M --> N[(BigQuery)];
@@ -78,7 +77,7 @@ sequenceDiagram
     participant User
     participant main.py
     participant CodeProcessor
-    participant AnalysisAPI
+    participant ExternalAnalysisAPI
     participant BigQuery
     participant OutputCSV
 
@@ -86,15 +85,15 @@ sequenceDiagram
     
     alt Full Analysis
         main.py->>CodeProcessor: Process file
-        CodeProcessor->>AnalysisAPI: Analyze github_link
-        AnalysisAPI-->>CodeProcessor: Analysis results (JSON)
+        CodeProcessor->>ExternalAnalysisAPI: Analyze code and github_link
+        ExternalAnalysisAPI-->>CodeProcessor: Analysis results (JSON)
         CodeProcessor->>BigQuery: Save combined results
         BigQuery-->>CodeProcessor: Confirm save
         CodeProcessor-->>main.py: Done
     else Categorize-Only Mode
         main.py->>CodeProcessor: Categorize file only
-        CodeProcessor->>AnalysisAPI: Analyze github_link
-        AnalysisAPI-->>CodeProcessor: Analysis results (JSON)
+        CodeProcessor->>ExternalAnalysisAPI: Analyze code and github_link
+        ExternalAnalysisAPI-->>CodeProcessor: Analysis results (JSON)
         CodeProcessor-->>main.py: Categorization results
         main.py->>OutputCSV: Write row
     end
@@ -108,10 +107,11 @@ sequenceDiagram
 4.  The `CodeProcessor` is initialized.
 5.  For each file in the list, the `CodeProcessor` orchestrates the analysis by:
     a.  Calling the `GitFileProcessor` to get the file's Git history and GitHub link.
-    b.  Calling the external Analysis API with the GitHub link.
-    c.  Receiving a comprehensive JSON response containing the full code evaluation.
-    d.  The `CodeProcessor` combines the Git metadata and the API evaluation into a single record.
-    e.  The `BigQueryRepository` is used to save the record to BigQuery.
+    b.  Reading the raw code from the file.
+    c.  Calling the external Analysis API with the GitHub link and the raw code.
+    d.  Receiving a comprehensive JSON response containing the full code evaluation and product categorization.
+    e.  The `CodeProcessor` combines the Git metadata and the API evaluation into a single record.
+    f.  The `BigQueryRepository` is used to save the record to BigQuery.
 6.  If any errors occur during processing, they are logged to a dynamically named log file in the `logs/` directory.
 
 ## 4. Key Technologies
@@ -129,3 +129,7 @@ sequenceDiagram
 *   **Decoupling from Git:** The system currently requires the files to be within a Git repository to function correctly. This could be made optional to allow for the analysis of arbitrary, non-versioned code.
 *   **Integration with CI/CD:** The tool could be integrated into a CI/CD pipeline to automatically analyze code on every commit, providing immediate feedback in pull requests.
 *   **Web-based UI:** A web-based UI could be developed to provide a more user-friendly way to view the analysis results and manage the system.
+
+## 6. Conclusion
+
+The Code Quality Analysis Framework is a powerful and flexible tool for analyzing code quality and storing the results in a structured database. Its modular architecture, parallel processing capabilities, and robust error handling make it a reliable and efficient solution for teams that are serious about maintaining high standards of code quality.
