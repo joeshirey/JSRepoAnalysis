@@ -103,13 +103,13 @@ class TestCodeProcessor(unittest.TestCase):
 
     @patch.object(CodeProcessor, "bigquery_repo")
     def test_is_already_processed_true(self, mock_bigquery_repo):
-        mock_bigquery_repo.read.return_value = {"last_updated": "2025-01-01"}
+        mock_bigquery_repo.record_exists.return_value = True
         git_info = {"github_link": "some_link", "last_updated": "2025-01-01"}
         self.assertTrue(self.processor._is_already_processed(git_info))
 
     @patch.object(CodeProcessor, "bigquery_repo")
     def test_is_already_processed_false(self, mock_bigquery_repo):
-        mock_bigquery_repo.read.return_value = {"last_updated": "2024-01-01"}
+        mock_bigquery_repo.record_exists.return_value = False
         git_info = {"github_link": "some_link", "last_updated": "2025-01-01"}
         self.assertFalse(self.processor._is_already_processed(git_info))
 

@@ -60,41 +60,34 @@ class TestBigQueryRepository(unittest.TestCase):
             repo.create({"test": "data"})
 
     @patch("google.cloud.bigquery.Client")
-    def test_read_success_with_results(self, mock_bigquery_client):
+    def test_record_exists_true(self, mock_bigquery_client):
         # Arrange
         mock_client_instance = mock_bigquery_client.return_value
         mock_query_job = MagicMock()
-
-        # Create a mock row that can be converted to a dict
-        mock_row = MagicMock()
-        mock_row.keys.return_value = ["last_updated"]
-        mock_row.__getitem__.side_effect = lambda key: "2025-01-01"
-
-        mock_query_job.__iter__.return_value = [mock_row]
+        mock_query_job.__iter__.return_value = [[1]]
         mock_client_instance.query.return_value = mock_query_job
         repo = BigQueryRepository(self.settings)
 
         # Act
-        result = repo.read("some_link")
+        result = repo.record_exists("some_link", "2025-01-01")
 
         # Assert
-        self.assertIsNotNone(result)
-        self.assertEqual(result, {"last_updated": "2025-01-01"})
+        self.assertTrue(result)
 
     @patch("google.cloud.bigquery.Client")
-    def test_read_success_no_results(self, mock_bigquery_client):
+    def test_record_exists_false(self, mock_bigquery_client):
         # Arrange
         mock_client_instance = mock_bigquery_client.return_value
         mock_query_job = MagicMock()
-        mock_query_job.result.return_value = []
+        mock_query_job.__iter__.return_value = [[0]]
         mock_client_instance.query.return_value = mock_query_job
         repo = BigQueryRepository(self.settings)
 
         # Act
-        result = repo.read("some_link")
+        result = repo.record_exists("some_link", "2025-01-01")
 
         # Assert
-        self.assertIsNone(result)
+        self.assertFalse(result)
 
     @patch("google.cloud.bigquery.Client")
     def test_delete_success(self, mock_bigquery_client):
