@@ -304,6 +304,7 @@ def main():
     log_filename = "_".join(log_filename_parts) + ".log"
 
     error_log_path = os.path.join("logs", log_filename)
+    os.makedirs(os.path.dirname(error_log_path), exist_ok=True)
     error_logger = logging.getLogger("error_logger")
     error_logger.setLevel(logging.ERROR)
     error_handler = logging.FileHandler(error_log_path)
