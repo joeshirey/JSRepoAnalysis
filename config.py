@@ -9,7 +9,6 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_PROJECT: str
     GOOGLE_CLOUD_LOCATION: str
     VERTEXAI_MODEL_NAME: str
-    FIRESTORE_DB: str
     BIGQUERY_DATASET: str
     BIGQUERY_TABLE: str
     API_URL: str

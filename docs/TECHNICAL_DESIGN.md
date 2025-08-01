@@ -1,12 +1,12 @@
-# Technical Design: Code Quality Analysis Framework
+# Technical Design: JSRepoAnalysis
 
 ## 1. Introduction
 
-This document provides a detailed technical overview of the Code Quality Analysis Framework, a Python-based command-line tool designed for orchestrating in-depth code analysis via an external API. It is intended for engineers who need to understand, maintain, or extend the system, and it covers the system's architecture, data flow, and key technologies.
+This document provides a detailed technical overview of the JSRepoAnalysis framework, a Python-based command-line tool designed for orchestrating in-depth code analysis via an external API. It is intended for engineers who need to understand, maintain, or extend the system, and it covers the system's architecture, data flow, and key technologies.
 
 ## 2. System Architecture
 
-The Code Quality Analyzer is a monolithic Python application that is designed to be run from the command line. It is built with a modular architecture that offloads all heavy analysis to a dedicated external API. The system is composed of a main orchestrator, a set of core tools for file and git management, and a BigQuery repository for data persistence.
+JSRepoAnalysis is a monolithic Python application that is designed to be run from the command line. It is built with a modular architecture that offloads all heavy analysis to a dedicated external API. The system is composed of a main orchestrator, a set of core tools for file and git management, and a BigQuery repository for data persistence.
 
 ### High-Level Architecture
 
@@ -46,7 +46,7 @@ graph TD
     *   Using a `ThreadPoolExecutor` to clone or update the repositories in parallel.
     *   Dynamically determining the default branch of each repository by calling `git remote show` and parsing the output. This makes the cloning process more robust and avoids errors when a repository's default branch is not named `main`.
 
-*   **`tools/code_processor.py`**: The `CodeProcessor` class is the heart of the application. It is responsible for orchestrating the analysis of a single file. It manages the entire lifecycle of a file's analysis, from fetching Git metadata to calling the external analysis API and finally saving the result. It supports the lazy initialization of the BigQuery repository, which means that the connection to the database is only established when it is actually needed.
+*   **`tools/code_processor.py`**: The `CodeProcessor` class is the heart of the application. It is responsible for orchestrating the analysis of a single file. It manages the entire lifecycle of a file's analysis, from fetching Git metadata to calling the external analysis API and finally saving the result. It supports the lazy initialization of the BigQuery repository, which means that the connection to the database is only established when it is actually needed. It also provides an `analyze_file_only` method for quick, database-free analysis and a `categorize_file_only` method for product categorization.
 
 *   **`tools/`**: This directory contains the core logic of the application, which is separated into a set of distinct and reusable modules.
     *   **`git_file_processor.py`**: The `GitFileProcessor` class uses the `git` command-line tool via the `subprocess` module to extract a rich set of metadata about a file, including its last commit date, commit history, and a direct link to the file on GitHub.
@@ -132,4 +132,4 @@ sequenceDiagram
 
 ## 6. Conclusion
 
-The Code Quality Analysis Framework is a powerful and flexible tool for analyzing code quality and storing the results in a structured database. Its modular architecture, parallel processing capabilities, and robust error handling make it a reliable and efficient solution for teams that are serious about maintaining high standards of code quality.
+The JSRepoAnalysis framework is a powerful and flexible tool for analyzing code quality and storing the results in a structured database. Its modular architecture, parallel processing capabilities, and robust error handling make it a reliable and efficient solution for teams that are serious about maintaining high standards of code quality.

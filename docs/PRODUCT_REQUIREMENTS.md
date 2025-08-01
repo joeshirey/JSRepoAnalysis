@@ -1,8 +1,8 @@
-# Product Requirements: Code Quality Analyzer
+# Product Requirements: JSRepoAnalysis
 
 ## 1. Overview
 
-The **Code Quality Analyzer** is a powerful, command-line tool engineered for development teams that are serious about maintaining high standards of code quality and consistency. It is designed to analyze a local or remote codebase of Javascript, Typescript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files, performing a deep, AI-powered analysis that goes beyond traditional static analysis. 
+**JSRepoAnalysis** is a powerful, command-line tool engineered for development teams that are serious about maintaining high standards of code quality and consistency. It is designed to analyze a local or remote codebase of Javascript, Typescript, Python, Java, Go, Rust, Ruby, C#, C++, and PHP files, performing a deep, AI-powered analysis that goes beyond traditional static analysis. 
 
 By gathering detailed metadata, performing a nuanced style and quality evaluation, and **accurately categorizing each code sample by its associated technology via an external API**, the tool provides a comprehensive and queryable history of a project's code health. This enables engineering managers, tech leads, and developers to track quality trends, identify areas for improvement, and ensure that all code, regardless of who wrote it, adheres to a consistent standard of excellence.
 

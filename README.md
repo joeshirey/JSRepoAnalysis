@@ -32,7 +32,7 @@ For a more detailed breakdown, see the [Technical Design Document](./docs/TECHNI
 ## Installation
 
 1.  **Prerequisites**:
-    *   Python 3.10+
+    *   Python 3.12+
     *   `git` command-line tool
     *   Google Cloud SDK (`gcloud`) authenticated with a project that has the Vertex AI and BigQuery APIs enabled.
     *   `uv` - A fast Python package installer and resolver. If you don't have it, you can install it with `pip install uv`.
@@ -66,7 +66,6 @@ For a more detailed breakdown, see the [Technical Design Document](./docs/TECHNI
 | `GOOGLE_CLOUD_PROJECT`    | Your Google Cloud project ID.                                                                           |
 | `GOOGLE_CLOUD_LOCATION`   | The Google Cloud region for your project (e.g., `us-central1`).                                         |
 | `VERTEXAI_MODEL_NAME`     | The specific Vertex AI model to be used by the external API (e.g., `gemini-1.5-flash-001`).              |
-| `FIRESTORE_DB`            | (Currently Unused) The name of the Firestore database.                                                  |
 | `BIGQUERY_DATASET`        | The name of your BigQuery dataset where the results will be stored.                                     |
 | `BIGQUERY_TABLE`          | The name of the BigQuery table for the analysis results.                                                |
 | `API_URL`                 | **Crucial:** The URL of the external analysis API that performs the code evaluation and categorization. |
@@ -79,32 +78,32 @@ The tool is run from the command line via `main.py`.
 
 **Analyze a single file and print the full API JSON response to the console:**
 ```bash
-uv run main.py /path/to/your/file.py --eval-only
+uv run python main.py /path/to/your/file.py --eval-only
 ```
 
 **Analyze an entire directory and save to BigQuery:**
 ```bash
-uv run main.py /path/to/your/project/
+uv run python main.py /path/to/your/project/
 ```
 
 **Analyze a list of GitHub URLs from a CSV file:**
 ```bash
-uv run main.py --from-csv /path/to/your/links.csv
+uv run python main.py --from-csv /path/to/your/links.csv
 ```
 
 **Force re-analysis of all files, even if unchanged:**
 ```bash
-uv run main.py /path/to/your/project/ --regen
+uv run python main.py /path/to/your/project/ --regen
 ```
 
 **Reprocess files that failed in a previous run:**
 ```bash
-uv run main.py --reprocess-log logs/your_error_log.log
+uv run python main.py --reprocess-log logs/your_error_log.log
 ```
 
 **Run product categorization only and output to CSV:**
 ```bash
-uv run main.py /path/to/your/project/ --categorize-only
+uv run python main.py /path/to/your/project/ --categorize-only
 ```
 
 ## BigQuery Schema
