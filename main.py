@@ -12,6 +12,7 @@ from collections import defaultdict
 from urllib.parse import urlparse
 from tqdm import tqdm
 from config import settings
+from google import genai
 from tools.code_processor import CodeProcessor
 from utils.logger import logger
 
@@ -195,7 +196,9 @@ def categorize_only(input_path, max_workers):
         logger.info("No files to process.")
         return
 
-    processor = CodeProcessor(settings)
+    client = genai.Client()
+    prompts = load_prompts()
+    processor = CodeProcessor(settings, client, prompts)
     try:
         with open(output_path, "w", newline="") as csvfile:
             fieldnames = [
@@ -272,7 +275,9 @@ def main():
         if not args.file_link or not os.path.isfile(args.file_link):
             parser.error("--eval-only requires a single file path.")
 
-        processor = CodeProcessor(settings)
+        client = genai.Client()
+        prompts = load_prompts()
+        processor = CodeProcessor(settings, client, prompts)
         try:
             result = processor.analyze_file_only(args.file_link)
             if result:
@@ -342,7 +347,9 @@ def main():
     consecutive_errors = [0]
     error_lock = threading.Lock()
 
-    processor = CodeProcessor(settings)
+    client = genai.Client()
+    prompts = load_prompts()
+    processor = CodeProcessor(settings, client, prompts)
     try:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
             futures = {
@@ -406,6 +413,24 @@ def main():
         if reprocess.lower() == "y":
             print("\nTo reprocess, run the following command:")
             print(f"uv run main.py --reprocess-log {error_log_path} --regen")
+
+
+def load_prompts():
+    """Loads all prompt files into a dictionary."""
+    prompt_dir = "./prompts"
+    prompt_files = {
+        "system_instructions": "system_instructions.txt",
+        "consolidated_eval": "consolidated_eval.txt",
+        "json_conversion": "json_conversion.txt",
+    }
+    prompts = {}
+    for key, filename in prompt_files.items():
+        with open(os.path.join(prompt_dir, filename), "r") as f:
+            if key == "system_instructions":
+                prompts[key] = f.read().splitlines()
+            else:
+                prompts[key] = f.read()
+    return prompts
 
 
 if __name__ == "__main__":

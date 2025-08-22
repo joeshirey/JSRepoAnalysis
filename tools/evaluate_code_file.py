@@ -1,7 +1,6 @@
 from .base_tool import BaseTool
 import re
 import time
-from google import genai
 from google.genai import types
 from google.genai.types import Tool, GoogleSearch
 from utils.exceptions import CodeEvaluatorError
@@ -17,40 +16,27 @@ class CodeEvaluator(BaseTool):
     grounding, and the second call formats the analysis into a clean JSON object.
     """
 
-    def __init__(self, config):
+    def __init__(
+        self,
+        config,
+        client,
+        system_instructions,
+        consolidated_eval_prompt,
+        json_conversion_prompt,
+    ):
         self.config = config
-        try:
-            self.client = genai.Client()
-            # System instructions are loaded from a file to guide the LLM's behavior.
-            with open("./prompts/system_instructions.txt", "r") as f:
-                self.system_instructions = f.read().splitlines()
-        except Exception as e:
-            raise CodeEvaluatorError(f"Error initializing genai.Client: {e}")
+        self.client = client
+        self.system_instructions = system_instructions
+        self.consolidated_eval_prompt = consolidated_eval_prompt
+        self.json_conversion_prompt = json_conversion_prompt
 
-    def execute(self, file_path, language, region_tag, github_link):
+    def execute(self, code, language, region_tag, github_link):
         """
         Reads a code file and returns a JSON string with an LLM-driven evaluation.
         """
-        try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                code = file.read()
-        except FileNotFoundError:
-            raise CodeEvaluatorError(f"File not found at path: {file_path}")
-        except Exception as e:
-            raise CodeEvaluatorError(f"Error reading file: {e}")
-
-        # The initial prompt is loaded from a template file.
-        try:
-            with open("./prompts/consolidated_eval.txt", "r") as f:
-                prompt_template = f.read()
-        except FileNotFoundError:
-            raise CodeEvaluatorError("Prompt file not found.")
-        except Exception as e:
-            raise CodeEvaluatorError(f"Error reading prompt file: {e}")
-
         # The code and its metadata are injected into the prompt template.
         prompt = self._fill_prompt_placeholders(
-            prompt_template_string=prompt_template,
+            prompt_template_string=self.consolidated_eval_prompt,
             language=language,
             code_sample=code,
             github_link=github_link,
@@ -79,15 +65,9 @@ class CodeEvaluator(BaseTool):
 
         # The second LLM call is a formatting step. It takes the raw text analysis
         # from the first call and converts it into a structured JSON object.
-        try:
-            with open("./prompts/json_conversion.txt", "r") as f:
-                json_prompt_template = f.read()
-        except FileNotFoundError:
-            raise CodeEvaluatorError("JSON conversion prompt file not found.")
-        except Exception as e:
-            raise CodeEvaluatorError(f"Error reading JSON conversion prompt file: {e}")
-
-        json_prompt = json_prompt_template.replace("{{text}}", analysis_text or "")
+        json_prompt = self.json_conversion_prompt.replace(
+            "{{text}}", analysis_text or ""
+        )
 
         # Grounding is not needed for this second, simpler formatting task.
         json_generation_config = types.GenerateContentConfig(

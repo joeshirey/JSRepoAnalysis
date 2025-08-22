@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from tools.code_processor import CodeProcessor
 from config import settings
 
@@ -7,8 +7,15 @@ from config import settings
 class TestCodeProcessorHappyPath(unittest.TestCase):
     def setUp(self):
         self.settings = settings
-        self.processor = CodeProcessor(self.settings)
+        self.mock_client = MagicMock()
+        self.mock_prompts = {
+            "system_instructions": "Test instructions",
+            "consolidated_eval": "Test eval prompt",
+            "json_conversion": "Test json prompt",
+        }
+        self.processor = CodeProcessor(self.settings, self.mock_client, self.mock_prompts)
 
+    @patch("tools.code_processor.CodeProcessor._read_raw_code", return_value="some code")
     @patch("tools.code_processor.CodeProcessor._build_bigquery_row")
     @patch("tools.code_processor.CodeProcessor._save_result")
     @patch("tools.code_processor.CodeProcessor._analyze_file")
@@ -23,6 +30,7 @@ class TestCodeProcessorHappyPath(unittest.TestCase):
         mock_analyze_file,
         mock_save_result,
         mock_build_bigquery_row,
+        mock_read_raw_code,
     ):
         # Arrange
         file_path = "test.py"
@@ -49,8 +57,12 @@ class TestCodeProcessorHappyPath(unittest.TestCase):
         # Assert
         mock_get_git_info.assert_called_once_with(file_path)
         mock_is_already_processed.assert_called_once_with(mock_git_info)
-        mock_analyze_file.assert_called_once_with(file_path, mock_git_info)
-        mock_build_bigquery_row.assert_called_once_with(mock_analysis_result, file_path)
+        mock_analyze_file.assert_called_once_with(
+            file_path, mock_git_info, "some code"
+        )
+        mock_build_bigquery_row.assert_called_once_with(
+            mock_analysis_result, file_path, "some code"
+        )
         mock_save_result.assert_called_once_with(mock_bq_row)
 
 

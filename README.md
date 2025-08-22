@@ -78,32 +78,32 @@ The tool is run from the command line via `main.py`.
 
 **Analyze a single file and print the full API JSON response to the console:**
 ```bash
-uv run python main.py /path/to/your/file.py --eval-only
+python main.py /path/to/your/file.py --eval-only
 ```
 
 **Analyze an entire directory and save to BigQuery:**
 ```bash
-uv run python main.py /path/to/your/project/
+python main.py /path/to/your/project/
 ```
 
 **Analyze a list of GitHub URLs from a CSV file:**
 ```bash
-uv run python main.py --from-csv /path/to/your/links.csv
+python main.py --from-csv /path/to/your/links.csv
 ```
 
 **Force re-analysis of all files, even if unchanged:**
 ```bash
-uv run python main.py /path/to/your/project/ --regen
+python main.py /path/to/your/project/ --regen
 ```
 
 **Reprocess files that failed in a previous run:**
 ```bash
-uv run python main.py --reprocess-log logs/your_error_log.log
+python main.py --reprocess-log logs/your_error_log.log
 ```
 
 **Run product categorization only and output to CSV:**
 ```bash
-uv run python main.py /path/to/your/project/ --categorize-only
+python main.py /path/to/your/project/ --categorize-only
 ```
 
 ## BigQuery Schema

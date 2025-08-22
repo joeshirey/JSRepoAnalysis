@@ -35,10 +35,11 @@ graph TD
 
 *   **`main.py`**: This is the main entry point of the application and acts as the central orchestrator. It is responsible for:
     *   Parsing command-line arguments using the `argparse` library.
-    *   Gathering the list of files to be processed, whether from a single file path, a directory, a CSV of GitHub links, or a log file of previously failed files.
-    *   Using a `ThreadPoolExecutor` to manage a pool of worker threads for parallel processing of files, which significantly improves performance when analyzing large codebases.
-    *   Providing a special `--eval-only` mode that allows for the quick analysis of a single file without any interaction with the BigQuery database.
-    *   Providing a `--categorize-only` mode that runs just the product categorization logic (via the API) and writes the results to a timestamped CSV file in the `logs/` directory.
+    *   **Efficient Initialization**: At startup, it loads all necessary prompt templates from the `/prompts` directory into memory and initializes a single, shared `genai.Client` instance.
+    *   Gathering the list of files to be processed from various sources (local path, directory, CSV, or reprocess log).
+    *   Using a `ThreadPoolExecutor` to manage a pool of worker threads for parallel processing.
+    *   **Passing Shared Resources**: Passing the shared `genai.Client` and the pre-loaded prompts to each `CodeProcessor` instance, avoiding redundant initializations and file reads.
+    *   Providing `--eval-only` and `--categorize-only` modes for targeted analysis without database interaction.
 
 *   **`get_files_from_csv`**: This function is a key part of the input processing logic. It is responsible for:
     *   Reading a CSV file of GitHub links.
@@ -46,7 +47,7 @@ graph TD
     *   Using a `ThreadPoolExecutor` to clone or update the repositories in parallel.
     *   Dynamically determining the default branch of each repository by calling `git remote show` and parsing the output. This makes the cloning process more robust and avoids errors when a repository's default branch is not named `main`.
 
-*   **`tools/code_processor.py`**: The `CodeProcessor` class is the heart of the application. It is responsible for orchestrating the analysis of a single file. It manages the entire lifecycle of a file's analysis, from fetching Git metadata to calling the external analysis API and finally saving the result. It supports the lazy initialization of the BigQuery repository, which means that the connection to the database is only established when it is actually needed. It also provides an `analyze_file_only` method for quick, database-free analysis and a `categorize_file_only` method for product categorization.
+*   **`tools/code_processor.py`**: The `CodeProcessor` class is the heart of the application, orchestrating the analysis of a single file. It is initialized with the shared `genai.Client` and pre-loaded prompts from `main.py`. This design ensures that it does not perform any file I/O for prompts or create its own client, making it lightweight and efficient to instantiate within worker threads. It manages the analysis lifecycle, from fetching Git metadata to calling the external API and saving the result. It also provides `analyze_file_only` and `categorize_file_only` methods for specialized, database-free analysis.
 
 *   **`tools/`**: This directory contains the core logic of the application, which is separated into a set of distinct and reusable modules.
     *   **`git_file_processor.py`**: The `GitFileProcessor` class uses the `git` command-line tool via the `subprocess` module to extract a rich set of metadata about a file, including its last commit date, commit history, and a direct link to the file on GitHub.
@@ -82,16 +83,17 @@ sequenceDiagram
     participant OutputCSV
 
     User->>main.py: Execute with file path or CSV
+    main.py->>main.py: Load Prompts & Init genai.Client
     
     alt Full Analysis
-        main.py->>CodeProcessor: Process file
+        main.py->>CodeProcessor: Process file(s) with shared client & prompts
         CodeProcessor->>ExternalAnalysisAPI: Analyze code and github_link
         ExternalAnalysisAPI-->>CodeProcessor: Analysis results (JSON)
         CodeProcessor->>BigQuery: Save combined results
         BigQuery-->>CodeProcessor: Confirm save
         CodeProcessor-->>main.py: Done
     else Categorize-Only Mode
-        main.py->>CodeProcessor: Categorize file only
+        main.py->>CodeProcessor: Categorize file(s) with shared client & prompts
         CodeProcessor->>ExternalAnalysisAPI: Analyze code and github_link
         ExternalAnalysisAPI-->>CodeProcessor: Analysis results (JSON)
         CodeProcessor-->>main.py: Categorization results
@@ -103,11 +105,12 @@ sequenceDiagram
 
 1.  The user executes `main.py` from the command line, providing a file path, a directory path, a CSV of GitHub links, or a log file to reprocess.
 2.  `main.py` parses the arguments and gathers a list of files to process.
-3.  If the `--from-csv` flag is used, the `get_files_from_csv` function is called to clone or update the repositories.
-4.  The `CodeProcessor` is initialized.
-5.  For each file in the list, the `CodeProcessor` orchestrates the analysis by:
-    a.  Calling the `GitFileProcessor` to get the file's Git history and GitHub link.
-    b.  Reading the raw code from the file.
+3.  `main.py` loads all prompt templates and initializes a single `genai.Client`.
+4.  If `--from-csv` is used, `get_files_from_csv` clones or updates the repositories.
+5.  A `CodeProcessor` instance is created, receiving the shared client and prompts.
+6.  For each file, the `CodeProcessor` orchestrates the analysis by:
+    a.  Reading the raw code from the file *once*.
+    b.  Calling `GitFileProcessor` to get Git history and the GitHub link.
     c.  Calling the external Analysis API with the GitHub link and the raw code.
     d.  Receiving a comprehensive JSON response containing the full code evaluation and product categorization.
     e.  The `CodeProcessor` combines the Git metadata and the API evaluation into a single record.
