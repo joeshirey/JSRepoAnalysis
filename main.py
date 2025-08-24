@@ -26,12 +26,20 @@ def get_files_from_csv(csv_path, max_workers):
     if not os.path.exists(clone_dir):
         os.makedirs(clone_dir)
 
+    # Process the CSV row by row to handle large files efficiently.
+    # A set is used to keep track of processed URLs for fast lookups.
+    unique_github_links = []
+    processed_urls = set()
     with open(csv_path, "r") as f:
         reader = csv.DictReader(f)
-        github_links = [row["indexed_source_url"] for row in reader]
+        for row in reader:
+            url = row["indexed_source_url"]
+            if url not in processed_urls:
+                unique_github_links.append(url)
+                processed_urls.add(url)
 
     repos = set()
-    for link in github_links:
+    for link in unique_github_links:
         match = re.search(r"https://github.com/([^/]+/[^/]+)", link)
         if match:
             repos.add(match.group(1))
@@ -98,7 +106,7 @@ def get_files_from_csv(csv_path, max_workers):
                 logger.error(f"{repo} generated an exception: {exc}")
 
     local_files = []
-    for link in github_links:
+    for link in unique_github_links:
         try:
             parsed_url = urlparse(link)
             path_parts = parsed_url.path.strip("/").split("/")
@@ -154,7 +162,8 @@ def process_file_wrapper(
                 logger.warning("Five consecutive errors detected. Pausing execution.")
                 user_input = input("Enter 'resume' to continue or 'stop' to abort: ")
                 if user_input.lower() == "stop":
-                    # A more graceful shutdown might be needed depending on application complexity
+                    # A more graceful shutdown might be needed depending on application complexity.
+                    # os._exit(1) is used here for an immediate stop.
                     os._exit(1)
                 else:
                     logger.info("Resuming execution.")
@@ -412,6 +421,8 @@ def main():
         reprocess = input("Would you like to reprocess the failed files? (y/n): ")
         if reprocess.lower() == "y":
             print("\nTo reprocess, run the following command:")
+            # The --regen flag is recommended to ensure that any partially processed
+            # or failed records are overwritten with a fresh analysis.
             print(f"uv run main.py --reprocess-log {error_log_path} --regen")
 
 

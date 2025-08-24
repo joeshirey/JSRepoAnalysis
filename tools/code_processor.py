@@ -90,7 +90,7 @@ class CodeProcessor:
         data = {"github_link": github_link, "code": code}
         try:
             response = requests.post(self.api_url, headers=headers, json=data)
-            response.raise_for_status()
+            response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
             return response.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"API call failed for {github_link}: {e}")
