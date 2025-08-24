@@ -19,7 +19,7 @@ This provides a comprehensive and queryable history of a project's code health, 
 
 The tool operates through a series of orchestrated steps:
 
-1.  **File Ingestion**: The `main.py` script parses user arguments to gather a list of files to process from the specified source (local path, directory, or CSV). For remote files, it efficiently clones or updates the source repositories.
+1.  **File Ingestion**: The `main.py` script parses user arguments to gather a list of files to process from the specified source (local path, directory, or CSV). When processing a CSV, it efficiently deduplicates URLs to ensure each file is analyzed only once. For remote files, it clones or updates the source repositories.
 2.  **Parallel Processing**: A thread pool is used to process multiple files in parallel, significantly speeding up analysis of large projects.
 3.  **Code & Git Analysis**: For each file, the `CodeProcessor` extracts key metadata, including Git history and the raw code content.
 4.  **External API Analysis**: The `CodeProcessor` sends the code and its metadata to a dedicated external analysis API. This API performs two key functions:
@@ -46,7 +46,7 @@ For a more detailed breakdown, see the [Technical Design Document](./docs/TECHNI
 3.  **Set up the environment:**
     *   Create a Python virtual environment:
         ```bash
-        python -m venv .venv
+        uv venv
         source .venv/bin/activate
         ```
     *   Install the required dependencies using `uv`:

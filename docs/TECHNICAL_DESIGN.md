@@ -12,8 +12,8 @@ JSRepoAnalysis is a monolithic Python application that is designed to be run fro
 
 ```mermaid
 graph TD
-    A[Input Source] --> B(main.py);
-    subgraph Input Source
+    A[User Input] --> B(main.py Orchestrator);
+    subgraph User Input
         direction LR
         C1[File Path];
         C2[Directory Path];
@@ -22,28 +22,29 @@ graph TD
     end
 
     B --> F{CodeProcessor};
-    B --> O[Output CSV];
+    B --> O[Categorization CSV Output];
 
-    F --> K[Git File Processor];
+    F --> K[GitFileProcessor];
     F --> L[External Analysis API];
     
-    F --> M[BigQuery Repository];
-    M --> N[(BigQuery)];
+    F --> M[BigQueryRepository];
+    M --> N[(BigQuery Database)];
 ```
 
 ### Core Components
 
 *   **`main.py`**: This is the main entry point of the application and acts as the central orchestrator. It is responsible for:
     *   Parsing command-line arguments using the `argparse` library.
-    *   **Efficient Initialization**: At startup, it loads all necessary prompt templates from the `/prompts` directory into memory and initializes a single, shared `genai.Client` instance.
+    *   **Efficient Initialization**: At startup, it loads all necessary prompt templates from the `/prompts` directory into memory and initializes a single, shared `genai.Client` instance for the entire run.
     *   Gathering the list of files to be processed from various sources (local path, directory, CSV, or reprocess log).
-    *   Using a `ThreadPoolExecutor` to manage a pool of worker threads for parallel processing.
-    *   **Passing Shared Resources**: Passing the shared `genai.Client` and the pre-loaded prompts to each `CodeProcessor` instance, avoiding redundant initializations and file reads.
+    *   Using a `ThreadPoolExecutor` to manage a pool of worker threads for parallel processing of files and repositories.
+    *   **Passing Shared Resources**: Passing the shared `genai.Client` and the pre-loaded prompts to each `CodeProcessor` instance, avoiding redundant initializations and file reads inside the worker threads.
     *   Providing `--eval-only` and `--categorize-only` modes for targeted analysis without database interaction.
 
 *   **`get_files_from_csv`**: This function is a key part of the input processing logic. It is responsible for:
-    *   Reading a CSV file of GitHub links.
-    *   Extracting the unique repository names from the links.
+    *   Reading a CSV file of GitHub links row by row to minimize memory usage.
+    *   Deduplicating URLs on the fly using a `set` for efficient lookup.
+    *   Extracting the unique repository names from the deduplicated links.
     *   Using a `ThreadPoolExecutor` to clone or update the repositories in parallel.
     *   Dynamically determining the default branch of each repository by calling `git remote show` and parsing the output. This makes the cloning process more robust and avoids errors when a repository's default branch is not named `main`.
 
