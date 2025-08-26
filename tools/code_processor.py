@@ -74,9 +74,24 @@ class CodeProcessor:
         return "processed"
 
     def _is_already_processed(self, git_info):
+        """
+        Checks if a file has already been processed and is up-to-date.
+
+        This method checks for the existence of a record in BigQuery matching the
+        file's GitHub link and last update timestamp.
+
+        Args:
+            git_info (dict): A dictionary containing Git metadata for the file.
+
+        Returns:
+            bool: True if the file has been processed and is current, False otherwise.
+        """
         github_link = git_info["github_link"]
         last_updated = git_info.get("last_updated")
-        return self.bigquery_repo.record_exists(github_link, last_updated)
+        processed = self.bigquery_repo.record_exists(github_link, last_updated)
+        if processed:
+            self.close()
+        return processed
 
     def _get_git_info(self, file_path):
         git_info = self.git_processor.execute(file_path)
@@ -114,9 +129,7 @@ class CodeProcessor:
             "product_category": api_analysis.get("product_category"),
             "product_name": api_analysis.get("product_name"),
             "language": api_analysis.get("language"),
-            "overall_compliance_score": assessment_data.get(
-                "overall_compliance_score"
-            ),
+            "overall_compliance_score": assessment_data.get("overall_compliance_score"),
             "evaluation_data": json.dumps(assessment_data),
             "region_tags": api_analysis.get("region_tags"),
             "raw_code": code,
@@ -125,9 +138,7 @@ class CodeProcessor:
             "branch_name": git_info.get("branch_name"),
             "commit_history": json.dumps(git_info.get("commit_history")),
             "metadata": json.dumps(git_info.get("metadata")),
-            "validation_details": json.dumps(
-                analysis_result.get("validation_history")
-            ),
+            "validation_details": json.dumps(analysis_result.get("validation_history")),
         }
 
     def _analyze_file(self, file_path, git_info, code):
@@ -155,8 +166,17 @@ class CodeProcessor:
         self.bigquery_repo.create(row)
 
     def close(self):
+        """
+        Closes the BigQuery repository connection and resets the instance.
+
+        This method ensures that the BigQuery client connection is properly torn
+        down. It also sets the internal `_bigquery_repo` attribute to None, which
+        allows the `bigquery_repo` property to create a fresh connection on
+        subsequent calls, preventing errors from using a closed client.
+        """
         if self._bigquery_repo:
             self._bigquery_repo.close()
+            self._bigquery_repo = None
 
     def analyze_file_only(self, file_path):
         """

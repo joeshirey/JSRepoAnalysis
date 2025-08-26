@@ -13,9 +13,13 @@ class TestCodeProcessorHappyPath(unittest.TestCase):
             "consolidated_eval": "Test eval prompt",
             "json_conversion": "Test json prompt",
         }
-        self.processor = CodeProcessor(self.settings, self.mock_client, self.mock_prompts)
+        self.processor = CodeProcessor(
+            self.settings, self.mock_client, self.mock_prompts
+        )
 
-    @patch("tools.code_processor.CodeProcessor._read_raw_code", return_value="some code")
+    @patch(
+        "tools.code_processor.CodeProcessor._read_raw_code", return_value="some code"
+    )
     @patch("tools.code_processor.CodeProcessor._build_bigquery_row")
     @patch("tools.code_processor.CodeProcessor._save_result")
     @patch("tools.code_processor.CodeProcessor._analyze_file")
@@ -57,9 +61,7 @@ class TestCodeProcessorHappyPath(unittest.TestCase):
         # Assert
         mock_get_git_info.assert_called_once_with(file_path)
         mock_is_already_processed.assert_called_once_with(mock_git_info)
-        mock_analyze_file.assert_called_once_with(
-            file_path, mock_git_info, "some code"
-        )
+        mock_analyze_file.assert_called_once_with(file_path, mock_git_info, "some code")
         mock_build_bigquery_row.assert_called_once_with(
             mock_analysis_result, file_path, "some code"
         )
