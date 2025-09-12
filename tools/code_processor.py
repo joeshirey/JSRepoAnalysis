@@ -47,7 +47,7 @@ class CodeProcessor:
             self._bigquery_repo = BigQueryRepository(self.settings)
         return self._bigquery_repo
 
-    def process_file(self, file_path, regen=False):
+    def process_file(self, file_path, regen=False, gen=False):
         git_info = self._get_git_info(file_path)
 
         if regen:
@@ -69,7 +69,9 @@ class CodeProcessor:
         if analysis_result is None:
             return "skipped"
 
-        bigquery_row = self._build_bigquery_row(analysis_result, file_path, code)
+        bigquery_row = self._build_bigquery_row(
+            analysis_result, file_path, code, gen
+        )
         self._save_result(bigquery_row)
         return "processed"
 
@@ -100,7 +102,23 @@ class CodeProcessor:
         return git_info
 
     def _call_analysis_api(self, github_link, code):
-        """Calls the analysis API and returns the JSON response."""
+        """
+        Calls the external analysis API.
+
+        This method sends the code and its GitHub link to the configured API endpoint
+        and returns the JSON response. It includes error handling for network
+        issues and non-successful HTTP status codes.
+
+        Args:
+            github_link (str): The URL of the file on GitHub.
+            code (str): The raw source code of the file.
+
+        Returns:
+            dict: The JSON response from the API.
+
+        Raises:
+            APIError: If the API call fails.
+        """
         headers = {"Content-Type": "application/json"}
         data = {"github_link": github_link, "code": code}
         try:
@@ -111,7 +129,7 @@ class CodeProcessor:
             logger.error(f"API call failed for {github_link}: {e}")
             raise APIError(f"API call failed for {github_link}: {e}")
 
-    def _build_bigquery_row(self, analysis_result, file_path, code):
+    def _build_bigquery_row(self, analysis_result, file_path, code, gen=False):
         git_info = analysis_result.get("git_info", {})
         api_analysis = analysis_result.get("analysis", {})
         assessment_data = api_analysis.get("assessment", {})
@@ -139,6 +157,7 @@ class CodeProcessor:
             "commit_history": json.dumps(git_info.get("commit_history")),
             "metadata": json.dumps(git_info.get("metadata")),
             "validation_details": json.dumps(analysis_result.get("validation_history")),
+            "Generated": gen,
         }
 
     def _analyze_file(self, file_path, git_info, code):

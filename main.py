@@ -130,6 +130,7 @@ def process_file_wrapper(
     processor: CodeProcessor,
     file_path: str,
     regen: bool,
+    gen: bool,
     error_logger: logging.Logger,
     processed_counts: defaultdict,
     skipped_counts: defaultdict,
@@ -143,7 +144,7 @@ def process_file_wrapper(
     """
     file_extension = os.path.splitext(file_path)[1]
     try:
-        status = processor.process_file(file_path, regen=regen)
+        status = processor.process_file(file_path, regen=regen, gen=gen)
         if status == "processed":
             processed_counts[file_extension] += 1
         elif status == "skipped":
@@ -158,6 +159,9 @@ def process_file_wrapper(
         errored_counts[file_extension] += 1
         with error_lock:
             consecutive_errors[0] += 1
+            # After 5 consecutive errors, pause execution and prompt the user to
+            # either continue or stop. This is a safeguard against runaway API
+            # costs or other systemic issues.
             if consecutive_errors[0] >= 5:
                 logger.warning("Five consecutive errors detected. Pausing execution.")
                 user_input = input("Enter 'resume' to continue or 'stop' to abort: ")
@@ -254,6 +258,11 @@ def main():
     )
     parser.add_argument(
         "--db", help="BigQuery table name (overrides environment variable)."
+    )
+    parser.add_argument(
+        "--gen",
+        action="store_true",
+        help="Set the 'Generated' column to true in BigQuery.",
     )
     parser.add_argument("--reprocess-log", help="Path to a log file to reprocess.")
     parser.add_argument(
@@ -366,13 +375,14 @@ def main():
                     process_file_wrapper,
                     processor,
                     file,
-                    args.regen,
-                    error_logger,
-                    processed_counts,
-                    skipped_counts,
-                    errored_counts,
-                    consecutive_errors,
-                    error_lock,
+                    regen=args.regen,
+                    gen=args.gen,
+                    error_logger=error_logger,
+                    processed_counts=processed_counts,
+                    skipped_counts=skipped_counts,
+                    errored_counts=errored_counts,
+                    consecutive_errors=consecutive_errors,
+                    error_lock=error_lock,
                 )
                 for file in files_to_process
             }

@@ -63,7 +63,7 @@ class TestCodeProcessorHappyPath(unittest.TestCase):
         mock_is_already_processed.assert_called_once_with(mock_git_info)
         mock_analyze_file.assert_called_once_with(file_path, mock_git_info, "some code")
         mock_build_bigquery_row.assert_called_once_with(
-            mock_analysis_result, file_path, "some code"
+            mock_analysis_result, file_path, "some code", False
         )
         mock_save_result.assert_called_once_with(mock_bq_row)
 

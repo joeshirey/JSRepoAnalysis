@@ -9,7 +9,21 @@ from utils.exceptions import GitProcessorError
 class GitFileProcessor(BaseTool):
     def execute(self, file_path):
         """
-        Extracts git data from a file cloned from a git repository.
+        Extracts comprehensive Git and file metadata for a given file path.
+
+        This method orchestrates the retrieval of various pieces of information,
+        including the GitHub repository details, branch name, commit history, and
+        local file metadata. It serves as the primary entry point for the tool.
+
+        Args:
+            file_path (str): The absolute or relative path to the file.
+
+        Returns:
+            dict: A dictionary containing the extracted Git and file metadata.
+
+        Raises:
+            GitProcessorError: If the file is not part of a Git repository or if
+                             any of the Git commands fail.
         """
         try:
             # Check if the file is part of a git repository
