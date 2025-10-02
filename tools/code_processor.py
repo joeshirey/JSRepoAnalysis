@@ -1,4 +1,6 @@
 import json
+import os
+from typing import Dict
 import requests
 from datetime import datetime
 from tools.git_file_processor import GitFileProcessor
@@ -9,6 +11,32 @@ from utils.exceptions import (
     GitRepositoryError,
     APIError,
 )
+
+FILE_EXTENSION_MAP: Dict[str, str] = {
+    ".py": "Python",
+    ".java": "Java",
+    ".groovy": "Java",
+    ".kt": "Java",
+    ".scala": "Java",
+    ".go": "Go",
+    ".rb": "Ruby",
+    ".rs": "Rust",
+    ".cs": "C#",
+    ".cpp": "C++",
+    ".cc": "C++",
+    ".h": "C++",
+    ".c": "C++",
+    ".hpp": "C++",
+    ".php": "PHP",
+    ".tf": "Terraform",
+    ".js": "JavaScript",
+    ".ts": "JavaScript",  # TypeScript is normalized to Javascript.
+    ".jsx": "JavaScript",
+    ".tsx": "JavaScript",
+    ".sh": "Unknown",
+    ".yaml": "Unknown",
+    ".xml": "Unknown",
+}
 
 
 class CodeProcessor:
@@ -48,6 +76,12 @@ class CodeProcessor:
         return self._bigquery_repo
 
     def process_file(self, file_path, regen=False, gen=False):
+        _, file_extension = os.path.splitext(file_path)
+        language = FILE_EXTENSION_MAP.get(file_extension)
+
+        if not language or language == "Unknown":
+            return "skipped"
+
         git_info = self._get_git_info(file_path)
 
         if regen:
@@ -101,7 +135,7 @@ class CodeProcessor:
             raise GitRepositoryError(f"File not in git repository: {file_path}")
         return git_info
 
-    def _call_analysis_api(self, github_link, code):
+    def _call_analysis_api(self, github_link, code, language):
         """
         Calls the external analysis API.
 
@@ -112,6 +146,7 @@ class CodeProcessor:
         Args:
             github_link (str): The URL of the file on GitHub.
             code (str): The raw source code of the file.
+            language (str): The programming language of the file.
 
         Returns:
             dict: The JSON response from the API.
@@ -120,7 +155,7 @@ class CodeProcessor:
             APIError: If the API call fails.
         """
         headers = {"Content-Type": "application/json"}
-        data = {"github_link": github_link, "code": code}
+        data = {"github_link": github_link, "code": code, "language": language}
         try:
             response = requests.post(self.api_url, headers=headers, json=data)
             response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
@@ -161,8 +196,10 @@ class CodeProcessor:
         }
 
     def _analyze_file(self, file_path, git_info, code):
+        _, file_extension = os.path.splitext(file_path)
+        language = FILE_EXTENSION_MAP.get(file_extension)
         github_link = git_info["github_link"]
-        api_response = self._call_analysis_api(github_link, code)
+        api_response = self._call_analysis_api(github_link, code, language)
 
         # Check for an error message from the API and skip the file if present.
         if "analysis" in api_response and "error" in api_response["analysis"]:
@@ -201,25 +238,37 @@ class CodeProcessor:
         """
         Analyzes a single file without any database interaction, returning the full API response.
         """
+        _, file_extension = os.path.splitext(file_path)
+        language = FILE_EXTENSION_MAP.get(file_extension)
+
+        if not language or language == "Unknown":
+            return None
+
         git_info = self._get_git_info(file_path)
         github_link = git_info["github_link"]
         code = self._read_raw_code(file_path)
         if "Error reading file" in code:
             logger.error(f"Could not read file {file_path} for analysis.")
             return None
-        return self._call_analysis_api(github_link, code)
+        return self._call_analysis_api(github_link, code, language)
 
     def categorize_file_only(self, file_path):
         """
         Analyzes a single file for product categorization only.
         """
+        _, file_extension = os.path.splitext(file_path)
+        language = FILE_EXTENSION_MAP.get(file_extension)
+
+        if not language or language == "Unknown":
+            return None
+
         git_info = self._get_git_info(file_path)
         github_link = git_info["github_link"]
         code = self._read_raw_code(file_path)
         if "Error reading file" in code:
             logger.error(f"Could not read file {file_path} for categorization.")
             return None
-        api_response = self._call_analysis_api(github_link, code)
+        api_response = self._call_analysis_api(github_link, code, language)
 
         api_analysis = api_response.get("analysis", {})
 
