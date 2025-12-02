@@ -1,0 +1,24 @@
+[project]
+name = "jsrepoanalysis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "demjson3>=3.0.6",
+    "firebase-admin>=7.1.0",
+    "google-api-core>=2.28.1",
+    "google-cloud-aiplatform>=1.128.0",
+    "google-cloud-bigquery>=3.38.0",
+    "google-cloud-firestore>=2.21.0",
+    "google-cloud-secret-manager>=2.25.0",
+    "google-genai>=1.52.0",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "pytest>=9.0.1",
+    "python-dotenv>=1.2.1",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.5",
+    "ruff>=0.14.7",
+    "tqdm>=4.67.1",
+]
