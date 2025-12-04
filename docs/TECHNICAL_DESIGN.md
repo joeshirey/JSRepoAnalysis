@@ -60,7 +60,7 @@ graph TD
     initializations and file reads inside the worker threads.
   - Providing `--eval-only` and `--categorize-only` modes for targeted
     analysis without database interaction.
-  - **Error Handling and Pause/Resume**: After five consecutive processing
+  - **Error Handling and Pause/Resume**: After twenty consecutive processing
     errors, the application will pause and prompt the user to either continue
     or stop the execution. This is a safeguard to prevent runaway API calls in
     case of a systemic issue.
@@ -178,14 +178,14 @@ sequenceDiagram
 6. For each file, the `CodeProcessor` orchestrates the analysis by:
    a. Reading the raw code from the file *once*.
    b. Calling `GitFileProcessor` to get Git history and the GitHub link.
-   c. Calling the external Analysis API with the GitHub link and the raw code.
+   c. Calling the external Analysis API with the GitHub link, the raw code, and the identified language.
    d. Receiving a comprehensive JSON response containing the full code
       evaluation and product categorization.
    e. The `CodeProcessor` combines the Git metadata and the API evaluation into
       a single record.
    f. The `BigQueryRepository` is used to save the record to BigQuery.
 7. If any errors occur during processing, they are logged to a dynamically
-   named log file in the `logs/` directory. If five consecutive errors occur,
+   named log file in the `logs/` directory. If twenty consecutive errors occur,
    the application pauses and prompts the user to continue or stop.
 
 ## 4. Key Technologies

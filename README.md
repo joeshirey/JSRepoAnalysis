@@ -68,7 +68,7 @@ The tool operates through a series of orchestrated steps:
 6. **Error Handling**: The tool includes robust error handling. If a file fails
    to process, it is logged to a dedicated error log. The tool can then be run
    with the `--reprocess-log` flag to re-process only the failed files. After
-   five consecutive errors, the tool will pause and prompt the user to
+   twenty consecutive errors, the tool will pause and prompt the user to
    continue or stop, preventing runaway API calls.
 
 For a more detailed breakdown, see the
@@ -124,51 +124,52 @@ For a more detailed breakdown, see the
 | `BIGQUERY_TABLE`          | The name of the BigQuery table for the analysis results.                                                |
 | `API_URL`                 | **Crucial:** The URL of the external analysis API that performs the code evaluation and categorization. |
 | `GOOGLE_GENAI_USE_VERTEXAI`| Set to `true` to use Vertex AI as the backend for the generative AI models.                               |
+| `REPO_SAMPLES_DIR`        | The local directory where remote repositories will be cloned (defaults to `~/samples`).                 |
 
 ## Usage
 
-The tool is run from the command line via `main.py`.
+The tool is run from the command line via `main.py`. Using `uv run` is recommended to automatically handle the virtual environment.
 
 **Analyze a single file and print the full API JSON response to the console:**
 
 ```bash
-python main.py /path/to/your/file.py --eval-only
+uv run main.py /path/to/your/file.py --eval-only
 ```
 
 **Analyze an entire directory and save to BigQuery:**
 
 ```bash
-python main.py /path/to/your/project/
+uv run main.py /path/to/your/project/
 ```
 
 **Analyze a list of GitHub URLs from a CSV file:**
 
 ```bash
-python main.py --from-csv /path/to/your/links.csv
+uv run main.py --from-csv /path/to/your/links.csv
 ```
 
 **Force re-analysis of all files, even if unchanged:**
 
 ```bash
-python main.py /path/to/your/project/ --regen
+uv run main.py /path/to/your/project/ --regen
 ```
 
 **Reprocess files that failed in a previous run:**
 
 ```bash
-python main.py --reprocess-log logs/your_error_log.log
+uv run main.py --reprocess-log logs/your_error_log.log
 ```
 
 **Run product categorization only and output to CSV:**
 
 ```bash
-python main.py /path/to/your/project/ --categorize-only
+uv run main.py /path/to/your/project/ --categorize-only
 ```
 
 **Specify the number of worker threads:**
 
 ```bash
-python main.py /path/to/your/project/ --workers 20
+uv run main.py /path/to/your/project/ --workers 20
 ```
 
 ## BigQuery Schema

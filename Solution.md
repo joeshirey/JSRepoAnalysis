@@ -89,21 +89,25 @@ This external API is responsible for the core AI-powered analysis. While its int
         ```json
         {
           "github_link": "https://github.com/user/repo/blob/main/file.py",
-          "code_content": "..."
+          "code": "...",
+          "language": "Python"
         }
         ```
     -   **Success Response (200 OK)**:
         ```json
         {
-          "product_name": "BigQuery",
-          "technology": "Python",
-          "region_tags": ["bigquery_quickstart"],
-          "evaluation": {
-            "overall_score": 85,
-            "criteria_breakdown": [
-              { "criterion": "Runnability", "score": 90, "assessment": "Code appears runnable." },
-              { "criterion": "Clarity", "score": 80, "assessment": "Variable names could be more descriptive." }
-            ]
+          "analysis": {
+            "product_category": "Data Analytics",
+            "product_name": "BigQuery",
+            "language": "Python",
+            "region_tags": ["bigquery_quickstart"],
+            "assessment": {
+              "overall_compliance_score": 85,
+              "criteria_breakdown": [
+                { "criterion_name": "runnability_and_configuration", "score": 90, "assessment": "Code appears runnable." },
+                { "criterion_name": "comments_and_code_clarity", "score": 80, "assessment": "Variable names could be more descriptive." }
+              ]
+            }
           }
         }
         ```
