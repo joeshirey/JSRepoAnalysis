@@ -10,7 +10,7 @@ class BigQueryRepository:
         try:
             self._db = bigquery.Client(project=self.config.GOOGLE_CLOUD_PROJECT)
             self.table_id = f"{self.config.GOOGLE_CLOUD_PROJECT}.{self.config.BIGQUERY_DATASET}.{self.config.BIGQUERY_TABLE}"
-            logger.info("BigQuery connection opened.")
+            logger.info(f"BigQuery connection opened (instance: {id(self)}).")
         except Exception as e:
             raise BigQueryError(f"Error initializing BigQuery client: {e}")
 
@@ -80,4 +80,4 @@ class BigQueryRepository:
 
     def close(self):
         # BigQuery client doesn't have an explicit close method.
-        logger.info("BigQuery connection conceptually closed.")
+        logger.info(f"BigQuery connection conceptually closed (instance: {id(self)}).")

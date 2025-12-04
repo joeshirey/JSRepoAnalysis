@@ -14,6 +14,7 @@ from tqdm import tqdm
 from config import settings
 from google import genai
 from tools.code_processor import CodeProcessor
+from tools.bigquery import BigQueryRepository
 from utils.logger import logger
 
 
@@ -51,10 +52,14 @@ def get_files_from_csv(csv_path, max_workers):
                 check=True,
                 capture_output=True,
                 text=True,
+                timeout=60,
             )
             for line in result.stdout.splitlines():
                 if "HEAD branch" in line:
                     return line.split(": ")[1]
+            return "main"  # Fallback
+        except subprocess.TimeoutExpired:
+            logger.error(f"Timeout determining default branch for {repo_url}")
             return "main"  # Fallback
         except subprocess.CalledProcessError as e:
             logger.error(
@@ -63,6 +68,7 @@ def get_files_from_csv(csv_path, max_workers):
             return "main"  # Fallback
 
     def clone_or_update_repo(repo):
+        logger.info(f"Starting to process repository: {repo}")
         repo_url = f"https://github.com/{repo}.git"
         target_dir = os.path.join(clone_dir, repo)
 
@@ -74,12 +80,14 @@ def get_files_from_csv(csv_path, max_workers):
                     check=True,
                     capture_output=True,
                     text=True,
+                    timeout=60,
                 )
                 subprocess.run(
                     ["git", "-C", target_dir, "pull"],
                     check=True,
                     capture_output=True,
                     text=True,
+                    timeout=60,
                 )
             else:
                 subprocess.run(
@@ -87,8 +95,13 @@ def get_files_from_csv(csv_path, max_workers):
                     check=True,
                     capture_output=True,
                     text=True,
+                    timeout=60,
                 )
+            logger.info(f"Finished processing repository: {repo}")
             return f"Successfully processed {repo}"
+        except subprocess.TimeoutExpired:
+            logger.error(f"Timeout processing repository {repo}")
+            return f"Timeout processing repository {repo}"
         except subprocess.CalledProcessError as e:
             return f"Error processing repository {repo}: {e.stderr}"
         except Exception as e:
@@ -106,6 +119,7 @@ def get_files_from_csv(csv_path, max_workers):
                 logger.error(f"{repo} generated an exception: {exc}")
 
     local_files = []
+    logger.info("Resolving local file paths from CSV links...")
     for link in unique_github_links:
         try:
             parsed_url = urlparse(link)
@@ -122,6 +136,7 @@ def get_files_from_csv(csv_path, max_workers):
             logger.error(f"Could not parse owner, repo, or file path from URL: {link}")
         except Exception as e:
             logger.error(f"An unexpected error occurred while parsing URL {link}: {e}")
+    logger.info(f"Resolved {len(local_files)} local files.")
 
     return local_files
 
@@ -142,6 +157,7 @@ def process_file_wrapper(
     Wrapper function to process a single file, handle exceptions, and update counters.
     Invokes the CodeProcessor to perform analysis via an external API.
     """
+    logger.info(f"Starting processing for file: {file_path}")
     file_extension = os.path.splitext(file_path)[1]
     try:
         status = processor.process_file(file_path, regen=regen, gen=gen)
@@ -152,6 +168,7 @@ def process_file_wrapper(
 
         with error_lock:
             consecutive_errors[0] = 0
+        logger.info(f"Finished processing for file: {file_path} with status: {status}")
 
     except Exception as e:
         logger.error(f"Error processing file {file_path}: {e}")
@@ -159,19 +176,12 @@ def process_file_wrapper(
         errored_counts[file_extension] += 1
         with error_lock:
             consecutive_errors[0] += 1
-            # After 5 consecutive errors, pause execution and prompt the user to
-            # either continue or stop. This is a safeguard against runaway API
-            # costs or other systemic issues.
-            if consecutive_errors[0] >= 5:
-                logger.warning("Five consecutive errors detected. Pausing execution.")
-                user_input = input("Enter 'resume' to continue or 'stop' to abort: ")
-                if user_input.lower() == "stop":
-                    # A more graceful shutdown might be needed depending on application complexity.
-                    # os._exit(1) is used here for an immediate stop.
-                    os._exit(1)
-                else:
-                    logger.info("Resuming execution.")
-                    consecutive_errors[0] = 0
+        # After 20 consecutive errors, pause execution and prompt the user to
+        # either continue or stop. This is a safeguard against runaway API
+        # costs or other systemic issues.
+        if consecutive_errors[0] >= 20:
+            logger.error("Twenty consecutive errors detected. Aborting execution to prevent runaway costs.")
+            os._exit(1)
 
 
 def categorize_file_wrapper(processor, file_path, csv_writer):
@@ -211,7 +221,7 @@ def categorize_only(input_path, max_workers):
 
     client = genai.Client()
     prompts = load_prompts()
-    processor = CodeProcessor(settings, client, prompts)
+    processor = CodeProcessor(settings, client, prompts)  # No DB for categorize-only mode
     try:
         with open(output_path, "w", newline="") as csvfile:
             fieldnames = [
@@ -236,7 +246,6 @@ def categorize_only(input_path, max_workers):
                     future.result()
 
     finally:
-        processor.close()
         print()  # Newline after progress bar
 
     logger.info(f"Categorization complete. Output written to {output_path}")
@@ -336,7 +345,9 @@ def main():
 
     files_to_process = []
     if args.from_csv:
+        logger.info("Processing from CSV...")
         files_to_process = get_files_from_csv(args.from_csv, args.workers)
+        logger.info(f"Got {len(files_to_process)} files from CSV.")
     elif args.reprocess_log:
         try:
             with open(args.reprocess_log, "r") as f:
@@ -365,11 +376,18 @@ def main():
     consecutive_errors = [0]
     error_lock = threading.Lock()
 
+    logger.info("Initializing GenAI client...")
     client = genai.Client()
     prompts = load_prompts()
-    processor = CodeProcessor(settings, client, prompts)
+    logger.info("Initializing BigQuery Repository...")
+    bigquery_repo = BigQueryRepository(settings)
+    logger.info("Initializing CodeProcessor...")
+    processor = CodeProcessor(settings, client, prompts, bigquery_repo)
+    
+    logger.info(f"Starting execution for {len(files_to_process)} files using {args.workers} workers.")
     try:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            logger.info("Submitting tasks to executor...")
             futures = {
                 executor.submit(
                     process_file_wrapper,
@@ -386,12 +404,13 @@ def main():
                 )
                 for file in files_to_process
             }
+            logger.info("Tasks submitted. Waiting for completion...")
             for future in tqdm(
                 as_completed(futures), total=len(futures), desc="Processing files"
             ):
                 future.result()
     finally:
-        processor.close()
+        bigquery_repo.close()
         print()  # Newline after progress bar
 
     total_processed = sum(processed_counts.values())

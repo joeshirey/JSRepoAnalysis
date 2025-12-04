@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     BIGQUERY_DATASET: str
     BIGQUERY_TABLE: str
     API_URL: str
+    API_TIMEOUT: int = 900
+    API_MAX_RETRIES: int = 3
     GOOGLE_GENAI_USE_VERTEXAI: bool = True
 
 

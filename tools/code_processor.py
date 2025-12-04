@@ -2,9 +2,10 @@ import json
 import os
 from typing import Dict
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from datetime import datetime
 from tools.git_file_processor import GitFileProcessor
-from tools.bigquery import BigQueryRepository
 from tools.evaluate_code_file import CodeEvaluator
 from utils.logger import logger
 from utils.exceptions import (
@@ -48,7 +49,7 @@ class CodeProcessor:
     code evaluation, and then writes the combined results to a BigQuery table.
     """
 
-    def __init__(self, settings, client, prompts):
+    def __init__(self, settings, client, prompts, bigquery_repo=None):
         """
         Initializes the CodeProcessor.
 
@@ -56,11 +57,25 @@ class CodeProcessor:
             settings: A configuration object with application settings.
             client: An initialized genai.Client instance.
             prompts: A dictionary containing pre-loaded prompt templates.
+            bigquery_repo: A shared BigQueryRepository instance (optional).
         """
         self.settings = settings
-        self._bigquery_repo = None
+        self.bigquery_repo = bigquery_repo
         self.git_processor = GitFileProcessor()
         self.api_url = settings.API_URL
+
+        # Configure retry strategy
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=getattr(settings, "API_MAX_RETRIES", 3),
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["POST"],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+
         self.evaluator = CodeEvaluator(
             config=settings,
             client=client,
@@ -69,11 +84,7 @@ class CodeProcessor:
             json_conversion_prompt=prompts["json_conversion"],
         )
 
-    @property
-    def bigquery_repo(self):
-        if self._bigquery_repo is None:
-            self._bigquery_repo = BigQueryRepository(self.settings)
-        return self._bigquery_repo
+
 
     def process_file(self, file_path, regen=False, gen=False):
         _, file_extension = os.path.splitext(file_path)
@@ -124,10 +135,7 @@ class CodeProcessor:
         """
         github_link = git_info["github_link"]
         last_updated = git_info.get("last_updated")
-        processed = self.bigquery_repo.record_exists(github_link, last_updated)
-        if processed:
-            self.close()
-        return processed
+        return self.bigquery_repo.record_exists(github_link, last_updated)
 
     def _get_git_info(self, file_path):
         git_info = self.git_processor.execute(file_path)
@@ -157,9 +165,17 @@ class CodeProcessor:
         headers = {"Content-Type": "application/json"}
         data = {"github_link": github_link, "code": code, "language": language}
         try:
-            response = requests.post(self.api_url, headers=headers, json=data)
+            logger.info(f"Calling analysis API for {github_link}...")
+            timeout = getattr(self.settings, "API_TIMEOUT", 90)
+            response = self.session.post(
+                self.api_url, headers=headers, json=data, timeout=timeout
+            )
+            logger.info(f"API returned status {response.status_code} for {github_link}")
             response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
             return response.json()
+        except requests.exceptions.Timeout:
+            logger.error(f"API call timed out for {github_link}")
+            raise APIError(f"API call timed out for {github_link}")
         except requests.exceptions.RequestException as e:
             logger.error(f"API call failed for {github_link}: {e}")
             raise APIError(f"API call failed for {github_link}: {e}")
@@ -223,16 +239,13 @@ class CodeProcessor:
 
     def close(self):
         """
-        Closes the BigQuery repository connection and resets the instance.
-
-        This method ensures that the BigQuery client connection is properly torn
-        down. It also sets the internal `_bigquery_repo` attribute to None, which
-        allows the `bigquery_repo` property to create a fresh connection on
-        subsequent calls, preventing errors from using a closed client.
+        No-op method for backward compatibility.
+        
+        The BigQuery connection is now managed externally and shared across
+        all CodeProcessor instances. This method is kept for compatibility
+        but does not close the connection.
         """
-        if self._bigquery_repo:
-            self._bigquery_repo.close()
-            self._bigquery_repo = None
+        pass
 
     def analyze_file_only(self, file_path):
         """
