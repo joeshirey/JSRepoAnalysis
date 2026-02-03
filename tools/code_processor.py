@@ -181,6 +181,13 @@ class CodeProcessor:
             raise APIError(f"API call failed for {github_link}: {e}")
 
     def _build_bigquery_row(self, analysis_result, file_path, code, gen=False):
+        """
+        Maps the combined analysis results and Git metadata into a flat dictionary
+        that matches the BigQuery table schema.
+        
+        This method transforms semi-structured evaluation data (JSON) into a 
+        format suitable for unnesting in the BigQuery view.
+        """
         git_info = analysis_result.get("git_info", {})
         api_analysis = analysis_result.get("analysis", {})
         assessment_data = api_analysis.get("assessment", {})

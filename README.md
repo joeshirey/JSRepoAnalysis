@@ -72,7 +72,7 @@ The tool operates through a series of orchestrated steps:
    continue or stop, preventing runaway API calls.
 
 For a more detailed breakdown, see the
-[Technical Design Document](./docs/TECHNICAL_DESIGN.md).
+[Technical Design Document](./docs/TDD.md).
 
 ## Installation
 
@@ -196,8 +196,8 @@ For the exact schema, see the SQL files in the `BQ/` directory.
 
 Contributions are welcome! Please feel free to submit a pull request or open an
 issue. For more details, see the
-[product requirements](./docs/PRODUCT_REQUIREMENTS.md) and
-[technical design](./docs/TECHNICAL_DESIGN.md).
+[product requirements](./docs/PRD.md) and
+[technical design](./docs/TDD.md).
 
 ## License
 

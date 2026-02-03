@@ -20,8 +20,15 @@ from utils.logger import logger
 
 def get_files_from_csv(csv_path, max_workers):
     """
-    Reads a CSV file of GitHub links, clones or updates the repos in parallel,
-    and returns a list of local file paths.
+    Reads a CSV file containing GitHub links, clones or updates the source 
+    repositories in parallel, and returns a comprehensive list of resolved 
+    local file paths for analysis.
+    
+    This function handles:
+    1. CSV parsing and deduplication of URLs.
+    2. Parallel repository cloning/updating using a ThreadPoolExecutor.
+    3. Dynamic default branch detection (main/master/etc).
+    4. Mapping GitHub shallow links to local filesystem paths.
     """
     clone_dir = os.path.expanduser(os.environ.get("REPO_SAMPLES_DIR", "~/samples"))
     if not os.path.exists(clone_dir):
@@ -176,11 +183,13 @@ def process_file_wrapper(
         errored_counts[file_extension] += 1
         with error_lock:
             consecutive_errors[0] += 1
-        # After 20 consecutive errors, pause execution and prompt the user to
-        # either continue or stop. This is a safeguard against runaway API
-        # costs or other systemic issues.
+        # After 20 consecutive errors, we halt execution. This threshold prevents 
+        # unintentional and costly API usage if there is a systemic issue (e.g., 
+        # network failure, API outage, or configuration error) that would affect 
+        # all subsequent files.
         if consecutive_errors[0] >= 20:
             logger.error("Twenty consecutive errors detected. Aborting execution to prevent runaway costs.")
+            # os._exit is used to immediately terminate all threads.
             os._exit(1)
 
 

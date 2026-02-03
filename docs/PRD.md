@@ -1,4 +1,4 @@
-# Product Requirements: JSRepoAnalysis
+# Product Requirements Document (PRD): JSRepoAnalysis
 
 ## Project Status
 
@@ -106,8 +106,8 @@ to a consistent standard of excellence.
 
 - **A Graphical User Interface (GUI):** This is a command-line only tool,
   designed to be used in a terminal or as part of an automated CI/CD pipeline.
-- **Real-time Analysis:** The tool is designed to be run on demand, not as a
-  real-time linter in an IDE.
+- **Real-time Analysis:** The [technical design](./docs/TDD.md) outlines the architecture. The tool is designed to be run on
+  demand, not as a real-time linter in an IDE.
 - **Automated Code Fixing:** The tool provides analysis and feedback, but it
   does not attempt to automatically fix any issues it finds. The goal is to
   empower developers to make their own informed decisions about how to improve

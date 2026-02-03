@@ -33,6 +33,10 @@ class BigQueryRepository:
         """
         Checks if a record with the given github_link and last_updated date
         already exists in BigQuery.
+        
+        This dual check allows for incremental analysis: only files that have 
+        been updated since their last evaluation (as determined by the 
+        Git last-commit date) will be re-processed.
         """
         if not last_updated:
             return False

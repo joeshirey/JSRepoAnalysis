@@ -1,4 +1,4 @@
-# Technical Design: JSRepoAnalysis
+# Technical Design Document (TDD): JSRepoAnalysis
 
 ## Project Status
 
